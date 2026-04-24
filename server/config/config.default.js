@@ -2,7 +2,8 @@
 const path = require('path');
 
 module.exports = {
-  keys: 'car-record-view-plus-secret-keys',
+  // 应用密钥 - 生产环境必须设置 EGG_KEYS 环境变量
+  keys: process.env.EGG_KEYS || 'CHANGE-ME-IN-PRODUCTION',
 
   security: {
     csrf: {
@@ -10,24 +11,28 @@ module.exports = {
     },
   },
 
+  // CORS 配置 - 生产环境建议设置 CORS_ORIGIN 环境变量
   cors: {
-    origin: '*',
+    origin: process.env.CORS_ORIGIN || '*',
     allowMethods: 'GET,HEAD,PUT,POST,DELETE,PATCH,OPTIONS',
   },
 
+  // JWT 配置 - 生产环境必须设置 JWT_SECRET 环境变量
   jwt: {
-    secret: 'your-jwt-secret-change-in-production',
+    secret: process.env.JWT_SECRET || 'CHANGE-ME-IN-PRODUCTION',
     expiresIn: '7d',
   },
 
+  // 视频配置 - 可通过 VIDEO_ROOT_DIR 环境变量配置
   video: {
-    rootDir: '/path/to/videos',
+    rootDir: process.env.VIDEO_ROOT_DIR || '/path/to/videos',
     defaultCover: '/public/images/default-cover.jpg',
   },
 
+  // 管理员凭据 - 生产环境必须设置 ADMIN_USERNAME 和 ADMIN_PASSWORD 环境变量
   admin: {
-    username: 'admin',
-    password: 'changeme',
+    username: process.env.ADMIN_USERNAME || 'admin',
+    password: process.env.ADMIN_PASSWORD || 'changeme',
   },
 
   pagination: {
