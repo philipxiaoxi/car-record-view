@@ -8,10 +8,12 @@
     "test": "egg-bin test"
   },
   "dependencies": {
-    "better-sqlite3": "^11.0.0",
     "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.0.0",
     "egg": "^3.17.0",
     "egg-scripts": "^2.17.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "fs-extra": "^11.3.4",
     "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {

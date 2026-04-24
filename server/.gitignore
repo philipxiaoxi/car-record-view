@@ -29,6 +29,12 @@ typings/
 database/*.db
 database/*.sqlite
 
+# Cache
+cache/covers/*
+cache/mp4/*
+!cache/covers/.gitkeep
+!cache/mp4/.gitkeep
+
 # IDE
 .idea/
 .vscode/
