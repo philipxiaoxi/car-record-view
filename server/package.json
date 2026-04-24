@@ -1,0 +1,23 @@
+{
+  "name": "car-record-server",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "egg-scripts start --daemon --title=car-record-server",
+    "stop": "egg-scripts stop --title=car-record-server",
+    "dev": "egg-bin dev",
+    "test": "egg-bin test"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "bcryptjs": "^2.4.3",
+    "egg": "^3.17.0",
+    "egg-scripts": "^2.17.0",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "egg-bin": "^6.6.0"
+  },
+  "egg": {
+    "declarations": true
+  }
+}
