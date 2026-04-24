@@ -1,5 +1,9 @@
 // app/router.js
 module.exports = app => {
-  const { router } = app;
-  // 路由将在后续任务中添加
+  const { router, controller } = app;
+
+  // 认证路由
+  router.post('/api/auth/login', controller.auth.login);
+  router.post('/api/auth/logout', controller.auth.logout);
+  router.get('/api/auth/me', controller.auth.me);
 };

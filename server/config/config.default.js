@@ -47,4 +47,7 @@ module.exports = {
   sqlite: {
     filename: path.join(__dirname, '../database/car-record.db'),
   },
+
+  // 中间件配置
+  middleware: ['jwt'],
 };
