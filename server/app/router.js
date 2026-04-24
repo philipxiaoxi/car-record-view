@@ -1,6 +1,7 @@
 // app/router.js
 module.exports = app => {
   const { router, controller } = app;
+  const adminMiddleware = app.middleware.admin({}, app);
 
   // 认证路由
   router.post('/api/auth/login', controller.auth.login);
@@ -16,4 +17,13 @@ module.exports = app => {
   // 播放历史路由
   router.get('/api/history', controller.history.list);
   router.post('/api/history', controller.history.add);
+
+  // 管理后台路由（需要管理员权限）
+  router.get('/api/admin/users', adminMiddleware, controller.admin.getUsers);
+  router.post('/api/admin/users', adminMiddleware, controller.admin.addUser);
+  router.delete('/api/admin/users/:id', adminMiddleware, controller.admin.deleteUser);
+  router.put('/api/admin/users/:id/password', adminMiddleware, controller.admin.resetPassword);
+  router.get('/api/admin/config', adminMiddleware, controller.admin.getConfig);
+  router.put('/api/admin/config', adminMiddleware, controller.admin.updateConfig);
+  router.post('/api/admin/cache/clear', adminMiddleware, controller.admin.clearCache);
 };
