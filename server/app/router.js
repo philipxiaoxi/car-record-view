@@ -18,6 +18,11 @@ module.exports = app => {
   router.get('/api/history', controller.history.list);
   router.post('/api/history', controller.history.add);
 
+  // 收藏路由
+  router.get('/api/favorites', controller.favorite.list);
+  router.post('/api/favorites', controller.favorite.add);
+  router.delete('/api/favorites/:timestamp', controller.favorite.remove);
+
   // 管理后台路由（需要管理员权限）
   // 扫描路由
   router.post('/api/admin/scan', adminMiddleware, controller.admin.startScan);
