@@ -26,6 +26,14 @@ module.exports = app => {
   router.post('/api/admin/scan/resume', adminMiddleware, controller.admin.resumeScan);
   router.post('/api/admin/scan/stop', adminMiddleware, controller.admin.stopScan);
   router.post('/api/admin/scan/rescan', adminMiddleware, controller.admin.rescan);
+  // 转码路由
+  router.post('/api/admin/transcode', adminMiddleware, controller.admin.startTranscode);
+  router.get('/api/admin/transcode/status', adminMiddleware, controller.admin.getTranscodeStatus);
+  router.post('/api/admin/transcode/pause', adminMiddleware, controller.admin.pauseTranscode);
+  router.post('/api/admin/transcode/resume', adminMiddleware, controller.admin.resumeTranscode);
+  router.post('/api/admin/transcode/stop', adminMiddleware, controller.admin.stopTranscode);
+  router.get('/api/admin/transcode/errors', adminMiddleware, controller.admin.getTranscodeErrors);
+  router.post('/api/admin/transcode/retry', adminMiddleware, controller.admin.retryTranscode);
   // 用户管理路由
   router.get('/api/admin/users', adminMiddleware, controller.admin.getUsers);
   router.post('/api/admin/users', adminMiddleware, controller.admin.addUser);
