@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const { getDatabase } = require('./db');
 const ffmpegService = require('./ffmpeg');
+const transcoderService = require('./transcoder');
 
 class VideoService {
   async getVideoList(config, page = 1, pageSize = 50) {
@@ -86,6 +87,18 @@ class VideoService {
       return { path: mp4Path, cached: true };
     }
 
+    // 检查是否有正在运行的批量转码任务
+    const task = transcoderService.getTaskStatus(config);
+    if (task && task.status === 'running') {
+      // 等待批量转码处理这个文件（最多等待 30 秒）
+      for (let i = 0; i < 6; i++) {
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        if (await fs.pathExists(mp4Path)) {
+          return { path: mp4Path, cached: true };
+        }
+      }
+    }
+
     const tsPath = this.getVideoPath(filename, config);
 
     if (!await fs.pathExists(tsPath)) {
@@ -107,6 +120,18 @@ class VideoService {
 
     if (await fs.pathExists(coverPath)) {
       return coverPath;
+    }
+
+    // 检查是否有正在运行的批量转码任务
+    const task = transcoderService.getTaskStatus(config);
+    if (task && task.status === 'running') {
+      // 等待批量转码处理这个文件（最多等待 30 秒）
+      for (let i = 0; i < 6; i++) {
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        if (await fs.pathExists(coverPath)) {
+          return coverPath;
+        }
+      }
     }
 
     const tsPath = this.getVideoPath(filename, config);
