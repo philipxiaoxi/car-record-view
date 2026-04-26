@@ -42,3 +42,16 @@ CREATE TABLE IF NOT EXISTS config (
   value TEXT NOT NULL,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 扫描任务表
+CREATE TABLE IF NOT EXISTS scan_tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  status TEXT NOT NULL DEFAULT 'pending',  -- pending/running/paused/completed/error
+  total_files INTEGER DEFAULT 0,
+  processed_files INTEGER DEFAULT 0,
+  current_file TEXT,
+  started_at DATETIME,
+  finished_at DATETIME,
+  error_message TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
