@@ -187,9 +187,11 @@ class TranscoderService {
     const totalFiles = filesToTranscode.length;
     this.updateTaskProgress(taskId, { total_files: totalFiles }, config);
 
-    let processed = 0;
-    let successCount = 0;
-    let failedCount = 0;
+    // 获取当前任务进度（用于恢复转码）
+    const task = db.prepare('SELECT processed_files, success_count, failed_count FROM transcode_tasks WHERE id = ?').get(taskId);
+    let processed = task.processed_files || 0;
+    let successCount = task.success_count || 0;
+    let failedCount = task.failed_count || 0;
 
     for (const filename of filesToTranscode) {
       // 检查暂停/停止请求
@@ -285,7 +287,7 @@ class TranscoderService {
   stopTranscode(config) {
     const task = this.getTaskStatus(config);
     if (!task) {
-      return { error: '没有运行中的任务' };
+      return { error: '没有运行中或暂停的任务' };
     }
     this.stopRequested = true;
     return { message: '正在停止' };
