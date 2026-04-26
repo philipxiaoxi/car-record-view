@@ -22,21 +22,15 @@ module.exports = app => {
     }
   });
 
-  // 服务启动后异步扫描，不阻塞启动
+  // 服务启动后检查是否有未完成的扫描任务
   app.ready(async () => {
-    app.logger.info('[Scanner] Starting video scan in background...');
-    setImmediate(async () => {
-      try {
-        const results = await scannerService.scanVideos(config);
-        app.logger.info('[Scanner] Scan completed: added=%d, removed=%d, errors=%d',
-          results.added, results.removed, results.errors.length);
-        if (results.errors.length > 0) {
-          app.logger.warn('[Scanner] Errors:', results.errors.slice(0, 5));
-        }
-      } catch (err) {
-        app.logger.error('[Scanner] Scan failed:', err);
-      }
-    });
+    const task = scannerService.getTaskStatus(config);
+    if (task && task.status === 'paused') {
+      app.logger.info('[Scanner] Found paused scan task, resuming...');
+      scannerService.resumeScan(config);
+    } else if (task && task.status === 'running') {
+      app.logger.info('[Scanner] Scan task already running');
+    }
   });
 
   app.beforeClose(async () => {
