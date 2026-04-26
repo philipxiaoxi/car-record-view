@@ -104,6 +104,46 @@ class AdminController extends Controller {
     const result = await adminService.clearCache(type, ctx.app.config);
     ctx.body = result;
   }
+
+  async startScan() {
+    const { ctx } = this;
+    const result = await scannerService.startScan(ctx.app.config);
+    ctx.body = result;
+  }
+
+  async getScanStatus() {
+    const { ctx } = this;
+    const task = scannerService.getTaskStatus(ctx.app.config);
+    if (!task) {
+      ctx.body = { status: 'idle' };
+      return;
+    }
+    ctx.body = scannerService.getTaskDetail(task.id, ctx.app.config);
+  }
+
+  async pauseScan() {
+    const { ctx } = this;
+    const result = scannerService.pauseScan(ctx.app.config);
+    ctx.body = result;
+  }
+
+  async resumeScan() {
+    const { ctx } = this;
+    const result = scannerService.resumeScan(ctx.app.config);
+    ctx.body = result;
+  }
+
+  async stopScan() {
+    const { ctx } = this;
+    const result = scannerService.stopScan(ctx.app.config);
+    ctx.body = result;
+  }
+
+  async rescan() {
+    const { ctx } = this;
+    const result = await scannerService.rescan(ctx.app.config);
+    ctx.body = result;
+  }
 }
 
 module.exports = AdminController;
