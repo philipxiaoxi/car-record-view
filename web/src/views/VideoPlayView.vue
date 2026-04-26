@@ -26,6 +26,11 @@
               <v-btn icon @click="togglePlay"><v-icon>{{ isPlaying ? 'mdi-pause' : 'mdi-play' }}</v-icon></v-btn>
               <span class="text-caption ml-2">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</span>
               <v-spacer />
+              <v-btn icon @click="favoriteStore.toggle(video.timestamp)">
+                <v-icon :color="favoriteStore.isFavorited(video.timestamp) ? 'red' : undefined">
+                  {{ favoriteStore.isFavorited(video.timestamp) ? 'mdi-heart' : 'mdi-heart-outline' }}
+                </v-icon>
+              </v-btn>
               <v-select v-model="playbackSpeed" :items="[0.5, 1, 1.5, 2, 4]" density="compact" hide-details class="speed-select" @update:modelValue="changeSpeed" />
               <v-btn icon :disabled="!video.prev" @click="goToVideo(video.prev)"><v-icon>mdi-skip-previous</v-icon></v-btn>
               <v-btn icon :disabled="!video.next" @click="goToVideo(video.next)"><v-icon>mdi-skip-next</v-icon></v-btn>
@@ -42,10 +47,12 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useVideoStore } from '../stores/video'
+import { useFavoriteStore } from '../stores/favorite'
 
 const route = useRoute()
 const router = useRouter()
 const videoStore = useVideoStore()
+const favoriteStore = useFavoriteStore()
 
 const frontVideo = ref(null)
 const rearVideo = ref(null)
