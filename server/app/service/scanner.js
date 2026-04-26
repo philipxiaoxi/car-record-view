@@ -146,9 +146,14 @@ class ScannerService {
 
   // 执行扫描
   async runScan(taskId, config) {
+    const db = getDatabase(config);
     const rootDir = config.video.rootDir;
     const fDir = path.join(rootDir, 'F');
     const rDir = path.join(rootDir, 'R');
+
+    // 获取当前任务进度（用于恢复扫描）
+    const task = db.prepare('SELECT processed_files FROM scan_tasks WHERE id = ?').get(taskId);
+    let processed = task.processed_files || 0;
 
     // 获取 F 目录所有文件
     let fFiles = [];
@@ -160,15 +165,13 @@ class ScannerService {
     const totalFiles = fFiles.length;
     this.updateTaskProgress(taskId, { total_files: totalFiles }, config);
 
-    let processed = 0;
-
     for (const filename of fFiles) {
       // 检查暂停/停止请求
       if (this.stopRequested) {
         this.updateTaskProgress(taskId, {
           status: 'error',
           error_message: '用户停止',
-          finished_at: "datetime('now')"
+          finished_at: new Date().toISOString()
         }, config);
         return;
       }
@@ -208,7 +211,7 @@ class ScannerService {
     this.updateTaskProgress(taskId, {
       status: 'completed',
       current_file: null,
-      finished_at: "datetime('now')"
+      finished_at: new Date().toISOString()
     }, config);
   }
 
