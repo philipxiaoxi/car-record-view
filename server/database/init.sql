@@ -55,3 +55,31 @@ CREATE TABLE IF NOT EXISTS scan_tasks (
   error_message TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 转码任务表
+CREATE TABLE IF NOT EXISTS transcode_tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  status TEXT NOT NULL DEFAULT 'pending',  -- pending/running/paused/completed/error
+  total_files INTEGER DEFAULT 0,
+  processed_files INTEGER DEFAULT 0,
+  success_count INTEGER DEFAULT 0,
+  failed_count INTEGER DEFAULT 0,
+  current_file TEXT,
+  started_at DATETIME,
+  finished_at DATETIME,
+  error_message TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 转码错误记录表
+CREATE TABLE IF NOT EXISTS transcode_errors (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  task_id INTEGER NOT NULL,
+  filename TEXT NOT NULL,
+  error_message TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (task_id) REFERENCES transcode_tasks(id)
+);
+
+-- 转码错误索引
+CREATE INDEX IF NOT EXISTS idx_transcode_errors_task ON transcode_errors(task_id);
