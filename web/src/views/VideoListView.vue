@@ -74,6 +74,11 @@
               <v-col v-for="video in favoriteStore.list" :key="video.timestamp" cols="12" sm="6" md="4" lg="3" xl="2">
                 <v-card hover @click="playVideo(video)" class="video-card">
                   <v-img :src="video.front || video.rear ? `/api/videos/${video.front || video.rear}/cover` : ''" aspect-ratio="16/9" cover>
+                    <div class="favorite-btn" @click.stop="favoriteStore.toggle(video.timestamp)">
+                      <v-icon size="small" :color="favoriteStore.isFavorited(video.timestamp) ? 'red' : 'white'">
+                        {{ favoriteStore.isFavorited(video.timestamp) ? 'mdi-heart' : 'mdi-heart-outline' }}
+                      </v-icon>
+                    </div>
                     <div class="video-badge" v-if="video.front && video.rear"><v-chip size="x-small" color="success">前后视</v-chip></div>
                   </v-img>
                   <v-card-text class="pa-2">
