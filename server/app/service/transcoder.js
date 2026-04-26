@@ -141,6 +141,155 @@ class TranscoderService {
       return { error: err.message };
     }
   }
+
+  // 启动转码任务
+  async startTranscode(config) {
+    // 检查是否有运行中的任务
+    const existingTask = this.getTaskStatus(config);
+    if (existingTask) {
+      return this.getTaskDetail(existingTask.id, config);
+    }
+
+    const taskId = this.createTask(config);
+    this.currentTask = taskId;
+    this.pauseRequested = false;
+    this.stopRequested = false;
+
+    // 异步执行转码
+    this.runTranscode(taskId, config).catch(err => {
+      console.error('Transcode error:', err);
+      const db = getDatabase(config);
+      db.prepare(`
+        UPDATE transcode_tasks
+        SET status = 'error', error_message = ?, finished_at = datetime('now')
+        WHERE id = ?
+      `).run(err.message, taskId);
+    });
+
+    return this.getTaskDetail(taskId, config);
+  }
+
+  // 执行转码
+  async runTranscode(taskId, config) {
+    const db = getDatabase(config);
+
+    // 获取所有需要转码的视频
+    const videos = db.prepare('SELECT filename FROM videos ORDER BY timestamp DESC').all();
+
+    // 过滤已转码文件
+    const filesToTranscode = [];
+    for (const v of videos) {
+      if (!await this.isAlreadyTranscoded(v.filename, config)) {
+        filesToTranscode.push(v.filename);
+      }
+    }
+
+    const totalFiles = filesToTranscode.length;
+    this.updateTaskProgress(taskId, { total_files: totalFiles }, config);
+
+    let processed = 0;
+    let successCount = 0;
+    let failedCount = 0;
+
+    for (const filename of filesToTranscode) {
+      // 检查暂停/停止请求
+      if (this.stopRequested) {
+        this.updateTaskProgress(taskId, {
+          status: 'error',
+          error_message: '用户停止',
+          finished_at: new Date().toISOString()
+        }, config);
+        return;
+      }
+
+      if (this.pauseRequested) {
+        this.updateTaskProgress(taskId, { status: 'paused' }, config);
+        return;
+      }
+
+      this.updateTaskProgress(taskId, { current_file: filename }, config);
+
+      try {
+        const result = await this.processFile(filename, config);
+
+        if (result.success) {
+          successCount++;
+        } else {
+          failedCount++;
+          this.recordError(taskId, filename, result.error, config);
+        }
+      } catch (err) {
+        failedCount++;
+        this.recordError(taskId, filename, err.message, config);
+      }
+
+      processed++;
+      this.updateTaskProgress(taskId, {
+        processed_files: processed,
+        success_count: successCount,
+        failed_count: failedCount
+      }, config);
+    }
+
+    // 完成
+    this.updateTaskProgress(taskId, {
+      status: 'completed',
+      current_file: null,
+      finished_at: new Date().toISOString()
+    }, config);
+  }
+
+  // 暂停转码
+  pauseTranscode(config) {
+    const task = this.getTaskStatus(config);
+    if (!task || task.status !== 'running') {
+      return { error: '没有运行中的任务' };
+    }
+    this.pauseRequested = true;
+    return { message: '正在暂停' };
+  }
+
+  // 恢复转码
+  resumeTranscode(config) {
+    const db = getDatabase(config);
+    const task = db.prepare(`
+      SELECT * FROM transcode_tasks
+      WHERE status = 'paused'
+      ORDER BY id DESC LIMIT 1
+    `).get();
+
+    if (!task) {
+      return { error: '没有暂停的任务' };
+    }
+
+    this.currentTask = task.id;
+    this.pauseRequested = false;
+    this.stopRequested = false;
+
+    db.prepare(`UPDATE transcode_tasks SET status = 'running' WHERE id = ?`).run(task.id);
+
+    // 继续转码
+    this.runTranscode(task.id, config).catch(err => {
+      console.error('Resume transcode error:', err);
+      db.prepare(`
+        UPDATE transcode_tasks
+        SET status = 'error', error_message = ?, finished_at = datetime('now')
+        WHERE id = ?
+      `).run(err.message, task.id);
+    });
+
+    return this.getTaskDetail(task.id, config);
+  }
+
+  // 停止转码
+  stopTranscode(config) {
+    const task = this.getTaskStatus(config);
+    if (!task) {
+      return { error: '没有运行中的任务' };
+    }
+    this.stopRequested = true;
+    return { message: '正在停止' };
+  }
 }
 
 module.exports = new TranscoderService();
