@@ -2,6 +2,7 @@
 const Controller = require('egg').Controller;
 const adminService = require('../service/admin');
 const scannerService = require('../service/scanner');
+const transcoderService = require('../service/transcoder');
 
 class AdminController extends Controller {
   async scanVideos() {
@@ -107,6 +108,15 @@ class AdminController extends Controller {
 
   async startScan() {
     const { ctx } = this;
+
+    // 检查是否有运行中的转码任务
+    const transcodeTask = transcoderService.getTaskStatus(ctx.app.config);
+    if (transcodeTask && transcodeTask.status === 'running') {
+      ctx.status = 400;
+      ctx.body = { error: '转码任务正在进行中，请等待完成后再启动扫描' };
+      return;
+    }
+
     const result = await scannerService.startScan(ctx.app.config);
     ctx.body = result;
   }
@@ -142,6 +152,61 @@ class AdminController extends Controller {
   async rescan() {
     const { ctx } = this;
     const result = await scannerService.rescan(ctx.app.config);
+    ctx.body = result;
+  }
+
+  async startTranscode() {
+    const { ctx } = this;
+
+    // 检查是否有运行中的扫描任务
+    const scanTask = scannerService.getTaskStatus(ctx.app.config);
+    if (scanTask && scanTask.status === 'running') {
+      ctx.status = 400;
+      ctx.body = { error: '扫描任务正在进行中，请等待完成后再启动转码' };
+      return;
+    }
+
+    const result = await transcoderService.startTranscode(ctx.app.config);
+    ctx.body = result;
+  }
+
+  async getTranscodeStatus() {
+    const { ctx } = this;
+    const task = transcoderService.getTaskStatus(ctx.app.config);
+    if (!task) {
+      ctx.body = { status: 'idle' };
+      return;
+    }
+    ctx.body = transcoderService.getTaskDetail(task.id, ctx.app.config);
+  }
+
+  async pauseTranscode() {
+    const { ctx } = this;
+    const result = transcoderService.pauseTranscode(ctx.app.config);
+    ctx.body = result;
+  }
+
+  async resumeTranscode() {
+    const { ctx } = this;
+    const result = transcoderService.resumeTranscode(ctx.app.config);
+    ctx.body = result;
+  }
+
+  async stopTranscode() {
+    const { ctx } = this;
+    const result = transcoderService.stopTranscode(ctx.app.config);
+    ctx.body = result;
+  }
+
+  async getTranscodeErrors() {
+    const { ctx } = this;
+    const errors = transcoderService.getFailedFiles(ctx.app.config);
+    ctx.body = { list: errors };
+  }
+
+  async retryTranscode() {
+    const { ctx } = this;
+    const result = await transcoderService.retryFailed(ctx.app.config);
     ctx.body = result;
   }
 }
