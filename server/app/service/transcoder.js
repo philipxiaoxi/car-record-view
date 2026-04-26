@@ -72,6 +72,75 @@ class TranscoderService {
       errorMessage: task.error_message,
     };
   }
+
+  // 获取缓存路径
+  getCachePaths(filename) {
+    const cacheDir = path.join(__dirname, '../../cache');
+    return {
+      mp4Path: path.join(cacheDir, 'mp4', filename.replace('.ts', '.mp4')),
+      coverPath: path.join(cacheDir, 'covers', filename.replace('.ts', '.jpg')),
+    };
+  }
+
+  // 检查文件是否已转码
+  async isAlreadyTranscoded(filename, config) {
+    const db = getDatabase(config);
+    const video = db.prepare('SELECT mp4_cached FROM videos WHERE filename = ?').get(filename);
+
+    if (!video || video.mp4_cached !== 1) return false;
+
+    const { mp4Path, coverPath } = this.getCachePaths(filename);
+    return await fs.pathExists(mp4Path) && await fs.pathExists(coverPath);
+  }
+
+  // 记录转码错误
+  recordError(taskId, filename, errorMessage, config) {
+    const db = getDatabase(config);
+    db.prepare(`
+      INSERT INTO transcode_errors (task_id, filename, error_message)
+      VALUES (?, ?, ?)
+    `).run(taskId, filename, errorMessage);
+  }
+
+  // 处理单个视频文件
+  async processFile(filename, config) {
+    const db = getDatabase(config);
+
+    // 获取视频信息
+    const video = db.prepare('SELECT * FROM videos WHERE filename = ?').get(filename);
+    if (!video) {
+      return { error: '视频记录不存在' };
+    }
+
+    // 检查源文件是否存在
+    const type = filename.includes('F.ts') ? 'F' : 'R';
+    const sourcePath = path.join(config.video.rootDir, type, filename);
+
+    if (!await fs.pathExists(sourcePath)) {
+      return { error: '源文件不存在' };
+    }
+
+    const { mp4Path, coverPath } = this.getCachePaths(filename);
+
+    try {
+      // 转码 MP4
+      await ffmpegService.convertTsToMp4(sourcePath, mp4Path);
+
+      // 生成封面
+      await ffmpegService.extractCover(sourcePath, coverPath);
+
+      // 更新数据库
+      db.prepare('UPDATE videos SET mp4_cached = 1 WHERE filename = ?').run(filename);
+
+      return { success: true };
+    } catch (err) {
+      // 清理可能已创建的部分文件
+      await fs.remove(mp4Path).catch(() => {});
+      await fs.remove(coverPath).catch(() => {});
+
+      return { error: err.message };
+    }
+  }
 }
 
 module.exports = new TranscoderService();
