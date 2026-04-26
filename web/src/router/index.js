@@ -9,6 +9,7 @@ const routes = [
     children: [
       { path: 'users', name: 'AdminUsers', component: () => import('../views/AdminUsersView.vue') },
       { path: 'config', name: 'AdminConfig', component: () => import('../views/AdminConfigView.vue') },
+      { path: 'transcode', name: 'AdminTranscode', component: () => import('../views/AdminTranscodeView.vue') },
     ]
   },
 ]
