@@ -51,7 +51,7 @@
                 class="mr-2"
               >继续</v-btn>
               <v-btn
-                v-if="scanStatus.status === 'running' || scanStatus.status === 'paused'"
+                v-if="scanStatus.status === 'running' || scanStatus.status === 'paused' || scanStatus.status === 'error'"
                 color="error"
                 variant="outlined"
                 @click="stopScan"
