@@ -292,6 +292,133 @@ class TranscoderService {
     this.stopRequested = true;
     return { message: '正在停止' };
   }
+
+  // 获取失败文件列表
+  getFailedFiles(config) {
+    const db = getDatabase(config);
+
+    // 获取最近一个任务
+    const task = db.prepare(`
+      SELECT id FROM transcode_tasks
+      ORDER BY id DESC LIMIT 1
+    `).get();
+
+    if (!task) return [];
+
+    return db.prepare(`
+      SELECT filename, error_message, created_at
+      FROM transcode_errors
+      WHERE task_id = ?
+      ORDER BY created_at DESC
+    `).all(task.id);
+  }
+
+  // 重试失败文件
+  async retryFailed(config) {
+    const db = getDatabase(config);
+
+    // 获取最近一个任务的失败文件
+    const task = db.prepare(`
+      SELECT id FROM transcode_tasks
+      WHERE status = 'completed'
+      ORDER BY id DESC LIMIT 1
+    `).get();
+
+    if (!task) {
+      return { error: '没有已完成的任务' };
+    }
+
+    const failedFiles = db.prepare(`
+      SELECT filename FROM transcode_errors
+      WHERE task_id = ?
+    `).all(task.id);
+
+    if (failedFiles.length === 0) {
+      return { message: '没有失败文件需要重试' };
+    }
+
+    // 创建新任务
+    const newTaskId = this.createTask(config);
+    this.currentTask = newTaskId;
+    this.pauseRequested = false;
+    this.stopRequested = false;
+
+    // 清除这些文件的错误记录
+    db.prepare('DELETE FROM transcode_errors WHERE task_id = ?').run(task.id);
+
+    // 异步执行重试
+    this.retryFiles(newTaskId, failedFiles.map(f => f.filename), config).catch(err => {
+      console.error('Retry error:', err);
+      db.prepare(`
+        UPDATE transcode_tasks
+        SET status = 'error', error_message = ?, finished_at = datetime('now')
+        WHERE id = ?
+      `).run(err.message, newTaskId);
+    });
+
+    return this.getTaskDetail(newTaskId, config);
+  }
+
+  // 重试指定文件
+  async retryFiles(taskId, filenames, config) {
+    const db = getDatabase(config);
+
+    const totalFiles = filenames.length;
+    this.updateTaskProgress(taskId, { total_files: totalFiles }, config);
+
+    // 获取当前任务进度（用于恢复）
+    const task = db.prepare('SELECT processed_files, success_count, failed_count FROM transcode_tasks WHERE id = ?').get(taskId);
+    let processed = task.processed_files || 0;
+    let successCount = task.success_count || 0;
+    let failedCount = task.failed_count || 0;
+
+    for (const filename of filenames) {
+      // 检查暂停/停止请求
+      if (this.stopRequested) {
+        this.updateTaskProgress(taskId, {
+          status: 'error',
+          error_message: '用户停止',
+          finished_at: new Date().toISOString()
+        }, config);
+        return;
+      }
+
+      if (this.pauseRequested) {
+        this.updateTaskProgress(taskId, { status: 'paused' }, config);
+        return;
+      }
+
+      this.updateTaskProgress(taskId, { current_file: filename }, config);
+
+      try {
+        const result = await this.processFile(filename, config);
+
+        if (result.success) {
+          successCount++;
+        } else {
+          failedCount++;
+          this.recordError(taskId, filename, result.error, config);
+        }
+      } catch (err) {
+        failedCount++;
+        this.recordError(taskId, filename, err.message, config);
+      }
+
+      processed++;
+      this.updateTaskProgress(taskId, {
+        processed_files: processed,
+        success_count: successCount,
+        failed_count: failedCount
+      }, config);
+    }
+
+    // 完成
+    this.updateTaskProgress(taskId, {
+      status: 'completed',
+      current_file: null,
+      finished_at: new Date().toISOString()
+    }, config);
+  }
 }
 
 module.exports = new TranscoderService();
