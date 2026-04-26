@@ -5,7 +5,8 @@ module.exports = (options, app) => {
   return async function jwtMiddleware(ctx, next) {
     // 跳过公开路径
     const publicPaths = ['/api/auth/login'];
-    if (publicPaths.includes(ctx.path)) {
+    // 封面和视频流接口允许匿名访问（img/video 标签无法设置 Authorization header）
+    if (publicPaths.includes(ctx.path) || ctx.path.match(/^\/api\/videos\/[^/]+\/(cover|stream)$/)) {
       return await next();
     }
 

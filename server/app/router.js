@@ -19,6 +19,7 @@ module.exports = app => {
   router.post('/api/history', controller.history.add);
 
   // 管理后台路由（需要管理员权限）
+  router.post('/api/admin/scan', adminMiddleware, controller.admin.scanVideos);
   router.get('/api/admin/users', adminMiddleware, controller.admin.getUsers);
   router.post('/api/admin/users', adminMiddleware, controller.admin.addUser);
   router.delete('/api/admin/users/:id', adminMiddleware, controller.admin.deleteUser);

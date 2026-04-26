@@ -1,8 +1,14 @@
 // app/controller/admin.js
 const Controller = require('egg').Controller;
 const adminService = require('../service/admin');
+const scannerService = require('../service/scanner');
 
 class AdminController extends Controller {
+  async scanVideos() {
+    const { ctx } = this;
+    const results = await scannerService.scanVideos(ctx.app.config);
+    ctx.body = results;
+  }
   async getUsers() {
     const { ctx } = this;
     const users = await adminService.getUserList(ctx.app.config);
