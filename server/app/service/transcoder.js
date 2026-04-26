@@ -297,9 +297,10 @@ class TranscoderService {
   getFailedFiles(config) {
     const db = getDatabase(config);
 
-    // 获取最近一个任务
+    // 获取最近一个已完成的任务
     const task = db.prepare(`
       SELECT id FROM transcode_tasks
+      WHERE status = 'completed'
       ORDER BY id DESC LIMIT 1
     `).get();
 
@@ -342,9 +343,6 @@ class TranscoderService {
     this.currentTask = newTaskId;
     this.pauseRequested = false;
     this.stopRequested = false;
-
-    // 清除这些文件的错误记录
-    db.prepare('DELETE FROM transcode_errors WHERE task_id = ?').run(task.id);
 
     // 异步执行重试
     this.retryFiles(newTaskId, failedFiles.map(f => f.filename), config).catch(err => {
@@ -395,6 +393,8 @@ class TranscoderService {
 
         if (result.success) {
           successCount++;
+          // 成功后删除对应的错误记录
+          db.prepare('DELETE FROM transcode_errors WHERE filename = ?').run(filename);
         } else {
           failedCount++;
           this.recordError(taskId, filename, result.error, config);
