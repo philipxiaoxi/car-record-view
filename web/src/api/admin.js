@@ -16,4 +16,13 @@ export const adminApi = {
   resumeScan: () => api.post('/admin/scan/resume'),
   stopScan: () => api.post('/admin/scan/stop'),
   rescan: () => api.post('/admin/scan/rescan'),
+
+  // 转码相关
+  startTranscode: () => api.post('/admin/transcode'),
+  getTranscodeStatus: () => api.get('/admin/transcode/status'),
+  pauseTranscode: () => api.post('/admin/transcode/pause'),
+  resumeTranscode: () => api.post('/admin/transcode/resume'),
+  stopTranscode: () => api.post('/admin/transcode/stop'),
+  getTranscodeErrors: () => api.get('/admin/transcode/errors'),
+  retryTranscode: () => api.post('/admin/transcode/retry'),
 }
