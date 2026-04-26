@@ -19,7 +19,14 @@ module.exports = app => {
   router.post('/api/history', controller.history.add);
 
   // 管理后台路由（需要管理员权限）
-  router.post('/api/admin/scan', adminMiddleware, controller.admin.scanVideos);
+  // 扫描路由
+  router.post('/api/admin/scan', adminMiddleware, controller.admin.startScan);
+  router.get('/api/admin/scan/status', adminMiddleware, controller.admin.getScanStatus);
+  router.post('/api/admin/scan/pause', adminMiddleware, controller.admin.pauseScan);
+  router.post('/api/admin/scan/resume', adminMiddleware, controller.admin.resumeScan);
+  router.post('/api/admin/scan/stop', adminMiddleware, controller.admin.stopScan);
+  router.post('/api/admin/scan/rescan', adminMiddleware, controller.admin.rescan);
+  // 用户管理路由
   router.get('/api/admin/users', adminMiddleware, controller.admin.getUsers);
   router.post('/api/admin/users', adminMiddleware, controller.admin.addUser);
   router.delete('/api/admin/users/:id', adminMiddleware, controller.admin.deleteUser);
