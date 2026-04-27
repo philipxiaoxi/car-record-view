@@ -6,6 +6,7 @@ const routes = [
   { path: '/', name: 'VideoList', component: () => import('../views/VideoListView.vue') },
   { path: '/play/:timestamp', name: 'VideoPlay', component: () => import('../views/VideoPlayView.vue') },
   { path: '/admin', name: 'Admin', component: () => import('../views/AdminView.vue'), meta: { admin: true },
+    redirect: '/admin/users',
     children: [
       { path: 'users', name: 'AdminUsers', component: () => import('../views/AdminUsersView.vue') },
       { path: 'config', name: 'AdminConfig', component: () => import('../views/AdminConfigView.vue') },
