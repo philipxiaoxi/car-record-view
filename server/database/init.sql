@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS transcode_tasks (
   failed_count INTEGER DEFAULT 0,
   current_file TEXT,
   started_at DATETIME,
+  started_at_ms INTEGER,
   finished_at DATETIME,
   error_message TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP

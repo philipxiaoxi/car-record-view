@@ -23,6 +23,27 @@ function getDatabase(config) {
       'utf8'
     );
     db.exec(initSql);
+
+    // 迁移：添加 started_at_ms 字段
+    try {
+      db.exec('ALTER TABLE transcode_tasks ADD COLUMN started_at_ms INTEGER');
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    // 迁移：添加 paused_at_ms 字段
+    try {
+      db.exec('ALTER TABLE transcode_tasks ADD COLUMN paused_at_ms INTEGER');
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+
+    // 迁移：添加 paused_duration_ms 字段
+    try {
+      db.exec('ALTER TABLE transcode_tasks ADD COLUMN paused_duration_ms INTEGER DEFAULT 0');
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
   }
   return db;
 }

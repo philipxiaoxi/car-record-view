@@ -25,10 +25,11 @@ class TranscoderService {
   // 创建新任务
   createTask(config) {
     const db = getDatabase(config);
+    const startedAtMs = Date.now();
     const result = db.prepare(`
-      INSERT INTO transcode_tasks (status, started_at)
-      VALUES ('running', datetime('now'))
-    `).run();
+      INSERT INTO transcode_tasks (status, started_at, started_at_ms)
+      VALUES ('running', datetime('now'), ?)
+    `).run(startedAtMs);
     return result.lastInsertRowid;
   }
 
@@ -53,9 +54,15 @@ class TranscoderService {
     const task = db.prepare('SELECT * FROM transcode_tasks WHERE id = ?').get(taskId);
     if (!task) return null;
 
-    const elapsed = task.started_at
-      ? Math.floor((Date.now() - new Date(task.started_at).getTime()) / 1000)
-      : 0;
+    let elapsedSeconds = 0;
+    if (task.started_at_ms) {
+      let pausedMs = task.paused_duration_ms || 0;
+      // 如果当前是暂停状态，加上当前暂停的时间
+      if (task.status === 'paused' && task.paused_at_ms) {
+        pausedMs += Date.now() - task.paused_at_ms;
+      }
+      elapsedSeconds = Math.max(0, Math.floor((Date.now() - task.started_at_ms - pausedMs) / 1000));
+    }
 
     return {
       taskId: task.id,
@@ -68,7 +75,7 @@ class TranscoderService {
       progress: task.total_files > 0 ? Math.round((task.processed_files / task.total_files) * 100) : 0,
       startedAt: task.started_at,
       finishedAt: task.finished_at,
-      elapsedSeconds: elapsed,
+      elapsedSeconds: elapsedSeconds,
       errorMessage: task.error_message,
     };
   }
@@ -243,11 +250,16 @@ class TranscoderService {
 
   // 暂停转码
   pauseTranscode(config) {
+    const db = getDatabase(config);
     const task = this.getTaskStatus(config);
     if (!task || task.status !== 'running') {
       return { error: '没有运行中的任务' };
     }
     this.pauseRequested = true;
+
+    // 记录暂停开始时间
+    db.prepare(`UPDATE transcode_tasks SET paused_at_ms = ? WHERE id = ?`).run(Date.now(), task.id);
+
     return { message: '正在暂停' };
   }
 
@@ -264,11 +276,17 @@ class TranscoderService {
       return { error: '没有暂停的任务' };
     }
 
+    // 计算本次暂停时长并累加
+    let pausedDurationMs = task.paused_duration_ms || 0;
+    if (task.paused_at_ms) {
+      pausedDurationMs += Date.now() - task.paused_at_ms;
+    }
+
     this.currentTask = task.id;
     this.pauseRequested = false;
     this.stopRequested = false;
 
-    db.prepare(`UPDATE transcode_tasks SET status = 'running' WHERE id = ?`).run(task.id);
+    db.prepare(`UPDATE transcode_tasks SET status = 'running', paused_at_ms = NULL, paused_duration_ms = ? WHERE id = ?`).run(pausedDurationMs, task.id);
 
     // 继续转码
     this.runTranscode(task.id, config).catch(err => {
