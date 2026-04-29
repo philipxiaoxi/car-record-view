@@ -24,6 +24,7 @@ coverage/
 # Egg.js specific
 run/
 typings/
+config/config.local.js
 
 # Database
 database/*.db
