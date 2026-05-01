@@ -5,7 +5,7 @@
       AI 安全分析
       <v-spacer />
       <v-btn
-        v-if="!hasTask"
+        v-if="!isTaskRunning"
         color="primary"
         :loading="creating"
         @click="startAnalysis"
@@ -14,7 +14,7 @@
         开始分析
       </v-btn>
       <v-btn
-        v-else-if="task?.status === 'pending'"
+        v-if="isTaskRunning && task?.status === 'pending'"
         color="warning"
         size="small"
         @click="cancelAnalysis"
@@ -61,6 +61,7 @@
         >
           <v-progress-circular indeterminate size="16" class="mr-2" />
           任务排队中，请稍候...
+          <span class="ml-2 text-caption">(自动刷新中)</span>
         </v-alert>
 
         <v-alert
@@ -70,6 +71,7 @@
         >
           <v-progress-circular indeterminate size="16" class="mr-2" />
           正在分析视频，请稍候...
+          <span class="ml-2 text-caption">(自动刷新中)</span>
         </v-alert>
 
         <v-alert
@@ -77,37 +79,43 @@
           type="error"
           variant="tonal"
         >
-          分析失败: {{ task.error_message }}
+          <div class="font-weight-bold mb-1">分析失败</div>
+          <div class="text-caption">{{ task.error_message }}</div>
+          <v-btn size="small" color="error" class="mt-2" @click="retryAnalysis">
+            重新分析
+          </v-btn>
         </v-alert>
 
         <v-alert
-          v-else-if="task.status === 'completed' && task.result?.events"
+          v-else-if="task.status === 'completed'"
           type="success"
           variant="tonal"
-          class="mb-4"
         >
-          分析完成，发现 {{ task.result.events?.length || 0 }} 个事件
+          分析完成
         </v-alert>
       </div>
 
       <!-- 分析结果 -->
-      <div v-if="task?.status === 'completed' && task.result" class="analysis-result">
+      <div v-if="task?.status === 'completed' && parsedResult" class="analysis-result">
         <!-- 风险概述 -->
-        <div v-if="task.result.summary" class="mb-4">
+        <div v-if="parsedResult.summary" class="mb-4">
           <div class="text-subtitle-1 font-weight-bold mb-2">风险概述</div>
-          <p class="text-body-2">{{ task.result.summary }}</p>
+          <p class="text-body-2">{{ parsedResult.summary }}</p>
           <v-chip
+            v-if="parsedResult.risk_level"
             :color="riskLevelColor"
             size="small"
             class="mt-2"
           >
-            风险等级: {{ task.result.risk_level?.toUpperCase() || 'UNKNOWN' }}
+            风险等级: {{ parsedResult.risk_level?.toUpperCase() || 'UNKNOWN' }}
           </v-chip>
         </div>
 
-        <!-- 时间线列表 -->
-        <div v-if="task.result.events?.length" class="events-timeline">
-          <div class="text-subtitle-1 font-weight-bold mb-2">事件列表</div>
+        <!-- 事件列表 -->
+        <div v-if="parsedResult.events && parsedResult.events.length > 0" class="events-timeline">
+          <div class="text-subtitle-1 font-weight-bold mb-2">
+            检测到 {{ parsedResult.events.length }} 个事件
+          </div>
           <v-timeline density="compact" align="start">
             <v-timeline-item
               v-for="(event, index) in sortedEvents"
@@ -151,17 +159,23 @@
           </v-timeline>
         </div>
 
-        <!-- 原始结果（调试用） -->
-        <div v-if="task.result.raw" class="mt-4">
+        <!-- 无法解析的结果 -->
+        <div v-if="!parsedResult.events && !parsedResult.summary && parsedResult.raw" class="mt-4">
           <v-expansion-panels>
             <v-expansion-panel>
               <v-expansion-panel-title>原始响应</v-expansion-panel-title>
               <v-expansion-panel-text>
-                <pre class="text-caption">{{ task.result.raw }}</pre>
+                <pre class="text-caption" style="white-space: pre-wrap; word-break: break-all;">{{ parsedResult.raw }}</pre>
               </v-expansion-panel-text>
             </v-expansion-panel>
           </v-expansion-panels>
         </div>
+      </div>
+
+      <!-- 摄像头信息 -->
+      <div v-if="task" class="mt-2 text-caption text-grey">
+        摄像头: {{ task.camera_type === 'front' ? '前视' : '后视' }}
+        <span v-if="task.created_at"> | 创建时间: {{ formatDateTime(task.created_at) }}</span>
       </div>
     </v-card-text>
   </v-card>
@@ -186,19 +200,39 @@ const showCameraDialog = ref(false)
 const selectedCamera = ref('front')
 let pollTimer = null
 
-const hasTask = computed(() => {
+const isTaskRunning = computed(() => {
   return task.value && ['pending', 'processing'].includes(task.value.status)
 })
 
+const parsedResult = computed(() => {
+  if (!task.value?.result) return null
+
+  // 如果 result 已经是对象
+  if (typeof task.value.result === 'object') {
+    return task.value.result
+  }
+
+  // 如果 result 是字符串，尝试解析
+  if (typeof task.value.result === 'string') {
+    try {
+      return JSON.parse(task.value.result)
+    } catch (e) {
+      return { raw: task.value.result }
+    }
+  }
+
+  return null
+})
+
 const sortedEvents = computed(() => {
-  if (!task.value?.result?.events) return []
-  return [...task.value.result.events].sort((a, b) => {
+  if (!parsedResult.value?.events) return []
+  return [...parsedResult.value.events].sort((a, b) => {
     return parseTimeToSeconds(a.start_time) - parseTimeToSeconds(b.start_time)
   })
 })
 
 const riskLevelColor = computed(() => {
-  const level = task.value?.result?.risk_level
+  const level = parsedResult.value?.risk_level
   if (level === 'high') return 'error'
   if (level === 'medium') return 'warning'
   return 'success'
@@ -235,6 +269,11 @@ function parseTimeToSeconds(timeStr) {
   return 0
 }
 
+function formatDateTime(dateStr) {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleString('zh-CN')
+}
+
 async function startAnalysis() {
   if (props.video?.front && props.video?.rear) {
     showCameraDialog.value = true
@@ -251,32 +290,52 @@ async function createTask(cameraType) {
   selectedCamera.value = cameraType
 
   try {
-    const response = await analysisApi.create(props.video.timestamp, cameraType)
-    const result = response.data
-    task.value = { ...result, status: result.status }
-    if (result.status === 'pending' || result.status === 'processing') {
-      startPolling()
-    }
+    await analysisApi.create(props.video.timestamp, cameraType)
+    // 创建任务后立即获取完整任务数据
+    await refreshTask()
   } catch (err) {
     console.error('创建分析任务失败:', err)
+    alert('创建分析任务失败: ' + (err.response?.data?.error || err.message))
   } finally {
     creating.value = false
   }
 }
 
-async function fetchTask() {
+async function refreshTask() {
+  if (!props.video?.timestamp) return
+
+  try {
+    const response = await analysisApi.get(props.video.timestamp, selectedCamera.value)
+    if (response.data) {
+      task.value = response.data
+
+      // 根据状态决定是否继续轮询
+      if (task.value.status === 'pending' || task.value.status === 'processing') {
+        startPolling()
+      } else {
+        stopPolling()
+      }
+    }
+  } catch (err) {
+    console.error('获取任务状态失败:', err)
+  }
+}
+
+async function fetchExistingTask() {
   if (!props.video?.timestamp) return
 
   try {
     const response = await analysisApi.getAll(props.video.timestamp)
     const tasks = response.data || []
-    // 找到最新的非失败任务
-    const validTask = tasks.find(t => t.status !== 'failed') || tasks[0]
-    if (validTask) {
-      task.value = validTask
-      selectedCamera.value = validTask.camera_type
 
-      if (validTask.status === 'pending' || validTask.status === 'processing') {
+    // 找到最新的任务
+    if (tasks.length > 0) {
+      // 按创建时间排序，取最新的
+      const latestTask = tasks.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]
+      task.value = latestTask
+      selectedCamera.value = latestTask.camera_type
+
+      if (latestTask.status === 'pending' || latestTask.status === 'processing') {
         startPolling()
       }
     }
@@ -291,9 +350,11 @@ async function pollTask() {
   try {
     const response = await analysisApi.get(props.video.timestamp, selectedCamera.value)
     const updatedTask = response.data
+
     if (updatedTask) {
       task.value = updatedTask
 
+      // 任务完成或失败时停止轮询
       if (updatedTask.status !== 'pending' && updatedTask.status !== 'processing') {
         stopPolling()
       }
@@ -315,27 +376,38 @@ async function cancelAnalysis() {
   }
 }
 
+async function retryAnalysis() {
+  // 删除失败的任务后重新创建
+  if (task.value?.camera_type) {
+    selectedCamera.value = task.value.camera_type
+    await createTask(task.value.camera_type)
+  }
+}
+
 function startPolling() {
-  if (pollTimer) return
-  pollTimer = setInterval(pollTask, 3000)
+  stopPolling() // 先清除之前的定时器
+  pollTimer = setInterval(pollTask, 2000) // 改为 2 秒轮询
+  console.log('[AI分析] 开始轮询任务状态')
 }
 
 function stopPolling() {
   if (pollTimer) {
     clearInterval(pollTimer)
     pollTimer = null
+    console.log('[AI分析] 停止轮询')
   }
 }
 
 watch(() => props.video, (newVideo) => {
   if (newVideo?.timestamp) {
-    fetchTask()
+    stopPolling()
+    fetchExistingTask()
   }
 }, { immediate: true })
 
 onMounted(() => {
   if (props.video?.timestamp) {
-    fetchTask()
+    fetchExistingTask()
   }
 })
 
