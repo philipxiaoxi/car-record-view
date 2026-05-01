@@ -3,18 +3,17 @@ const jwt = require('jsonwebtoken');
 
 module.exports = (options, app) => {
   return async function jwtMiddleware(ctx, next) {
-    // 跳过公开路径
-    const publicPaths = ['/api/auth/login'];
-    // 封面和视频流接口允许匿名访问（img/video 标签无法设置 Authorization header）
-    if (publicPaths.includes(ctx.path) || ctx.path.match(/^\/api\/videos\/[^/]+\/(cover|stream)$/)) {
+    // 跳过登录接口
+    if (ctx.path === '/api/auth/login') {
       return await next();
     }
 
-    const token = ctx.get('Authorization')?.replace('Bearer ', '');
+    // 从 Cookie 读取 token
+    const token = ctx.cookies.get('token');
 
     if (!token) {
       ctx.status = 401;
-      ctx.body = { error: '未提供认证令牌' };
+      ctx.body = { error: '未登录' };
       return;
     }
 
@@ -24,7 +23,7 @@ module.exports = (options, app) => {
       await next();
     } catch (err) {
       ctx.status = 401;
-      ctx.body = { error: '令牌无效或已过期' };
+      ctx.body = { error: '登录已过期，请重新登录' };
     }
   };
 };
