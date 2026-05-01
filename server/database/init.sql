@@ -84,3 +84,20 @@ CREATE TABLE IF NOT EXISTS transcode_errors (
 
 -- 转码错误索引
 CREATE INDEX IF NOT EXISTS idx_transcode_errors_task ON transcode_errors(task_id);
+
+-- 视频分析任务表
+CREATE TABLE IF NOT EXISTS video_analysis (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  video_timestamp TEXT NOT NULL,
+  camera_type TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  result TEXT,
+  error_message TEXT,
+  file_id TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  completed_at DATETIME
+);
+
+-- 视频分析任务索引
+CREATE UNIQUE INDEX IF NOT EXISTS idx_video_analysis_unique ON video_analysis(video_timestamp, camera_type);
+CREATE INDEX IF NOT EXISTS idx_video_analysis_status ON video_analysis(status);
