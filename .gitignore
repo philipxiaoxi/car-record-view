@@ -28,3 +28,11 @@ logs/
 
 # Build
 dist/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Cache
+cache/
