@@ -23,7 +23,10 @@ cd web && npm run build       # 构建生产版本
 ### 后端 (server/)
 - **框架**: Egg.js
 - **数据库**: SQLite (better-sqlite3)，初始化脚本在 `database/init.sql`
-- **认证**: JWT，中间件在 `app/middleware/`
+- **认证**: JWT + HttpOnly Cookie，中间件在 `app/middleware/jwt.js`
+  - 登录时服务器设置 HttpOnly Cookie 存储 JWT
+  - 所有请求（包括视频流、封面图）通过 Cookie 认证
+  - Cookie 配置：httpOnly、sameSite: strict、maxAge: 7天
 - **视频处理**: FFmpeg (fluent-ffmpeg)，用于元数据提取、转码、封面生成
 
 **核心服务**:
@@ -47,7 +50,7 @@ cd web && npm run build       # 构建生产版本
 
 **目录结构**:
 - `views/`: 页面组件 (VideoList, VideoPlay, Login, Admin 及其子页面)
-- `api/`: API 调用封装，axios 实例自动携带 JWT token
+- `api/`: API 调用封装，依赖浏览器自动携带 Cookie 认证
 - `stores/`: Pinia stores (auth, video, favorite)
 
 **路由守卫**:
@@ -68,8 +71,10 @@ cd web && npm run build       # 构建生产版本
 
 ## API 结构
 
-- `/api/auth/*`: 认证接口
-- `/api/videos/*`: 视频列表、详情、流播放
+- `/api/auth/*`: 认证接口（登录设置 Cookie，登出清除 Cookie）
+- `/api/videos/*`: 视频列表、详情、流播放（均需认证）
+- `/api/videos/:filename/stream`: 视频流（通过 Cookie 认证）
+- `/api/videos/:filename/cover`: 封面图（通过 Cookie 认证）
 - `/api/videos/:timestamp/analysis`: AI 视频分析任务（创建/获取/取消）
 - `/api/history`: 播放历史
 - `/api/favorites`: 收藏
