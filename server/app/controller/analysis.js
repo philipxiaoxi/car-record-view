@@ -29,8 +29,7 @@ class AnalysisController extends Controller {
   // 获取分析结果
   async show() {
     const { ctx, app } = this;
-    const { timestamp } = ctx.params;
-    const { cameraType } = ctx.query;
+    const { timestamp, cameraType } = ctx.params;
 
     if (!cameraType) {
       ctx.status = 400;
@@ -89,8 +88,7 @@ class AnalysisController extends Controller {
   // 取消分析任务
   async destroy() {
     const { ctx, app } = this;
-    const { timestamp } = ctx.params;
-    const { cameraType } = ctx.query;
+    const { timestamp, cameraType } = ctx.params;
 
     if (!cameraType) {
       ctx.status = 400;

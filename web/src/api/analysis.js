@@ -8,7 +8,7 @@ export const analysisApi = {
 
   // 获取分析结果
   get: (timestamp, cameraType) =>
-    api.get(`/videos/${encodeURIComponent(timestamp)}/analysis`, { params: { cameraType } }),
+    api.get(`/videos/${encodeURIComponent(timestamp)}/analysis/${cameraType}`),
 
   // 获取视频的所有分析结果
   getAll: (timestamp) =>
@@ -16,5 +16,5 @@ export const analysisApi = {
 
   // 取消分析任务
   cancel: (timestamp, cameraType) =>
-    api.delete(`/videos/${encodeURIComponent(timestamp)}/analysis`, { params: { cameraType } }),
+    api.delete(`/videos/${encodeURIComponent(timestamp)}/analysis/${cameraType}`),
 }
