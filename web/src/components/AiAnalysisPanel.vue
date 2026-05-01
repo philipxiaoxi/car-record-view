@@ -251,7 +251,8 @@ async function createTask(cameraType) {
   selectedCamera.value = cameraType
 
   try {
-    const result = await analysisApi.create(props.video.timestamp, cameraType)
+    const response = await analysisApi.create(props.video.timestamp, cameraType)
+    const result = response.data
     task.value = { ...result, status: result.status }
     if (result.status === 'pending' || result.status === 'processing') {
       startPolling()
@@ -267,7 +268,8 @@ async function fetchTask() {
   if (!props.video?.timestamp) return
 
   try {
-    const tasks = await analysisApi.getAll(props.video.timestamp)
+    const response = await analysisApi.getAll(props.video.timestamp)
+    const tasks = response.data || []
     // 找到最新的非失败任务
     const validTask = tasks.find(t => t.status !== 'failed') || tasks[0]
     if (validTask) {
@@ -287,7 +289,8 @@ async function pollTask() {
   if (!task.value || !props.video?.timestamp) return
 
   try {
-    const updatedTask = await analysisApi.get(props.video.timestamp, selectedCamera.value)
+    const response = await analysisApi.get(props.video.timestamp, selectedCamera.value)
+    const updatedTask = response.data
     if (updatedTask) {
       task.value = updatedTask
 
