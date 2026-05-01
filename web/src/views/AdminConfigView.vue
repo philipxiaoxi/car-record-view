@@ -71,6 +71,35 @@
         <v-divider class="my-4" />
         <v-btn type="submit" color="primary" :loading="saving">保存配置</v-btn>
       </v-form>
+
+      <!-- AI 配置 -->
+      <v-card variant="outlined" class="mt-4">
+        <v-card-title class="text-h6">AI 配置</v-card-title>
+        <v-card-text>
+          <v-text-field
+            v-model="aiConfig.ark_api_key"
+            label="火山引擎 API Key"
+            type="password"
+            hint="在火山引擎控制台获取"
+            persistent-hint
+          />
+          <v-text-field
+            v-model="aiConfig.ark_model_id"
+            label="模型 ID"
+            hint="如: doubao-seed-2-0-lite-260215"
+            persistent-hint
+          />
+          <v-text-field
+            v-model="aiConfig.ark_base_url"
+            label="API Base URL"
+            hint="默认: https://ark.cn-beijing.volces.com/api/v3"
+            persistent-hint
+          />
+          <v-btn color="primary" class="mt-4" @click="saveAiConfig" :loading="savingAi">
+            保存 AI 配置
+          </v-btn>
+        </v-card-text>
+      </v-card>
     </v-card-text>
   </v-card>
 </template>
@@ -86,9 +115,25 @@ const starting = ref(false)
 const rescanning = ref(false)
 let pollTimer = null
 
+const aiConfig = ref({
+  ark_api_key: '',
+  ark_model_id: '',
+  ark_base_url: 'https://ark.cn-beijing.volces.com/api/v3'
+})
+const savingAi = ref(false)
+
 const loadConfig = async () => {
   const { data } = await adminApi.getConfig()
   config.value = data
+}
+
+const loadAiConfig = async () => {
+  try {
+    const { data } = await adminApi.getAiConfig()
+    aiConfig.value = { ...aiConfig.value, ...data }
+  } catch (err) {
+    console.error('加载 AI 配置失败:', err)
+  }
 }
 
 const loadScanStatus = async () => {
@@ -179,6 +224,18 @@ const saveConfig = async () => {
   finally { saving.value = false }
 }
 
+const saveAiConfig = async () => {
+  savingAi.value = true
+  try {
+    await adminApi.updateAiConfig(aiConfig.value)
+    alert('AI 配置已保存')
+  } catch (err) {
+    alert('保存失败: ' + (err.response?.data?.error || err.message))
+  } finally {
+    savingAi.value = false
+  }
+}
+
 const clearCache = async (type) => {
   if (!confirm(`确定要清理${type === 'all' ? '所有' : type}缓存吗？`)) return
   try {
@@ -198,6 +255,7 @@ const formatTime = (seconds) => {
 onMounted(async () => {
   await loadConfig()
   await loadScanStatus()
+  await loadAiConfig()
   if (scanStatus.value.status === 'running') {
     startPolling()
   }

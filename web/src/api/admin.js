@@ -25,4 +25,9 @@ export const adminApi = {
   stopTranscode: () => api.post('/admin/transcode/stop'),
   getTranscodeErrors: () => api.get('/admin/transcode/errors'),
   retryTranscode: () => api.post('/admin/transcode/retry'),
+
+  // AI 配置相关
+  getAiConfig: () => api.get('/admin/config/ai'),
+  updateAiConfig: (data) => api.put('/admin/config/ai', data),
+  getAnalysisQueue: () => api.get('/admin/analysis/queue'),
 }
