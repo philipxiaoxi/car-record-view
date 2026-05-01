@@ -29,7 +29,10 @@ export const useAuthStore = defineStore('auth', {
         this.user = data.user
         localStorage.setItem('user', JSON.stringify(data.user))
       } catch {
-        this.logout()
+        // 认证失效，清理本地状态
+        // 401 拦截器会处理重定向到登录页
+        this.user = null
+        localStorage.removeItem('user')
       }
     },
   },
