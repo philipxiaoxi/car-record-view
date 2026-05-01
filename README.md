@@ -164,6 +164,9 @@ cd web && npm run dev
 ### 管理后台
 ![管理后台](screenshots/back.png)
 
+### AI 视频分析
+![AI 分析](screenshots/ai.png)
+
 ## 许可证
 
 [MIT](LICENSE)
