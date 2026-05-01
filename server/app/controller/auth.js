@@ -21,11 +21,26 @@ class AuthController extends Controller {
       return;
     }
 
-    ctx.body = result;
+    // 设置 HttpOnly Cookie
+    ctx.cookies.set('token', result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7天
+    });
+
+    // 只返回用户信息，不返回 token
+    ctx.body = { user: result.user };
   }
 
   async logout() {
     const { ctx } = this;
+    // 清除 Cookie
+    ctx.cookies.set('token', null, {
+      path: '/',
+      maxAge: 0,
+    });
     ctx.body = { message: '登出成功' };
   }
 
