@@ -209,6 +209,64 @@ class AdminController extends Controller {
     const result = await transcoderService.retryFailed(ctx.app.config);
     ctx.body = result;
   }
+
+  // 获取 AI 配置
+  async getAiConfig() {
+    const { ctx, app } = this;
+    const db = require('../service/db').getDatabase(app.config);
+
+    const keys = ['ark_api_key', 'ark_model_id', 'ark_base_url'];
+    const config = {};
+
+    for (const key of keys) {
+      const row = db.prepare('SELECT value FROM config WHERE key = ?').get(key);
+      if (row) {
+        if (key === 'ark_api_key') {
+          // 脱敏显示
+          config[key] = row.value ? '***' + row.value.slice(-4) : '';
+        } else {
+          config[key] = row.value;
+        }
+      }
+    }
+
+    ctx.body = config;
+  }
+
+  // 更新 AI 配置
+  async updateAiConfig() {
+    const { ctx, app } = this;
+    const db = require('../service/db').getDatabase(app.config);
+
+    const { ark_api_key, ark_model_id, ark_base_url } = ctx.request.body;
+
+    const stmt = db.prepare(
+      `INSERT OR REPLACE INTO config (key, value, updated_at) VALUES (?, ?, datetime('now'))`
+    );
+
+    if (ark_api_key !== undefined && ark_api_key !== '' && !ark_api_key.startsWith('***')) {
+      stmt.run('ark_api_key', ark_api_key);
+    }
+
+    if (ark_model_id !== undefined) {
+      stmt.run('ark_model_id', ark_model_id);
+    }
+
+    if (ark_base_url !== undefined) {
+      stmt.run('ark_base_url', ark_base_url);
+    }
+
+    ctx.body = { message: 'AI 配置已更新' };
+  }
+
+  // 获取分析任务队列
+  async getAnalysisQueue() {
+    const { ctx, app } = this;
+    const analysisService = require('../service/analysis');
+
+    const stats = await analysisService.getQueueStats(app.config);
+    ctx.body = stats;
+  }
 }
 
 module.exports = AdminController;

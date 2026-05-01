@@ -53,4 +53,8 @@ module.exports = app => {
   router.get('/api/admin/config', adminMiddleware, controller.admin.getConfig);
   router.put('/api/admin/config', adminMiddleware, controller.admin.updateConfig);
   router.post('/api/admin/cache/clear', adminMiddleware, controller.admin.clearCache);
+  // AI 配置路由
+  router.get('/api/admin/config/ai', adminMiddleware, controller.admin.getAiConfig);
+  router.put('/api/admin/config/ai', adminMiddleware, controller.admin.updateAiConfig);
+  router.get('/api/admin/analysis/queue', adminMiddleware, controller.admin.getAnalysisQueue);
 };
