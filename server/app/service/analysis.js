@@ -168,10 +168,20 @@ class AnalysisService {
       console.log(`[Analysis] 分析视频: ${fileInfo.id}`);
       const response = await arkService.analyzeVideo(fileInfo.id, ANALYSIS_PROMPT);
 
-      // 解析结果
+      // 解析结果 - 火山引擎返回结构: [{type: 'reasoning'}, {type: 'message', content: [{text: 'JSON'}]}]
       let result;
       try {
-        const outputText = response.output || '';
+        let outputText = '';
+        // 从 response.output 数组中提取实际的 JSON 文本
+        if (Array.isArray(response.output)) {
+          const messageItem = response.output.find(item => item.type === 'message');
+          if (messageItem?.content?.[0]?.text) {
+            outputText = messageItem.content[0].text;
+          }
+        }
+        if (!outputText && response.output) {
+          outputText = response.output;
+        }
         result = JSON.parse(outputText);
       } catch (parseErr) {
         console.warn('[Analysis] 解析 AI 响应失败，保存原始文本');
