@@ -2,15 +2,12 @@ import axios from 'axios'
 
 const api = axios.create({ baseURL: '/api', timeout: 30000 })
 
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
-  return config
-})
+// Cookie 认证不需要手动设置 Authorization header
+// 浏览器会自动携带 Cookie
 
 api.interceptors.response.use(r => r, error => {
   if (error.response?.status === 401) {
-    localStorage.removeItem('token')
+    // 清除本地用户状态
     localStorage.removeItem('user')
     window.location.href = '/login'
   }
