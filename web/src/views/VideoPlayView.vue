@@ -31,11 +31,20 @@
                   {{ favoriteStore.isFavorited(video.timestamp) ? 'mdi-heart' : 'mdi-heart-outline' }}
                 </v-icon>
               </v-btn>
+              <v-btn icon @click="showAiPanel = !showAiPanel">
+                <v-icon>mdi-brain</v-icon>
+              </v-btn>
               <v-select v-model="playbackSpeed" :items="[0.5, 1, 1.5, 2, 4]" density="compact" hide-details class="speed-select" @update:modelValue="changeSpeed" />
               <v-btn icon :disabled="!video.prev" @click="goToVideo(video.prev)"><v-icon>mdi-skip-previous</v-icon></v-btn>
               <v-btn icon :disabled="!video.next" @click="goToVideo(video.next)"><v-icon>mdi-skip-next</v-icon></v-btn>
             </v-row>
           </v-card>
+
+          <AiAnalysisPanel
+            v-if="showAiPanel"
+            :video="video"
+            @seek="seekTo"
+          />
         </template>
         <v-alert v-else type="error">视频不存在或加载失败</v-alert>
       </v-container>
@@ -48,6 +57,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useVideoStore } from '../stores/video'
 import { useFavoriteStore } from '../stores/favorite'
+import AiAnalysisPanel from '../components/AiAnalysisPanel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -63,6 +73,7 @@ const currentTime = ref(0)
 const duration = ref(0)
 const progress = ref(0)
 const playbackSpeed = ref(1)
+const showAiPanel = ref(false)
 
 const timestamp = computed(() => decodeURIComponent(route.params.timestamp))
 const isMobile = computed(() => window.innerWidth < 768)
