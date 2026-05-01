@@ -73,7 +73,7 @@ const currentTime = ref(0)
 const duration = ref(0)
 const progress = ref(0)
 const playbackSpeed = ref(1)
-const showAiPanel = ref(false)
+const showAiPanel = ref(true)
 
 const timestamp = computed(() => decodeURIComponent(route.params.timestamp))
 const isMobile = computed(() => window.innerWidth < 768)
