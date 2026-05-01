@@ -30,6 +30,8 @@ cd web && npm run build       # 构建生产版本
 - `scanner.js`: 扫描视频目录，解析文件名获取时间戳，提取元数据入库
 - `transcoder.js`: 将 .ts 视频转码为 .mp4，生成封面图，支持暂停/恢复
 - `ffmpeg.js`: FFmpeg 操作封装
+- `analysis.js`: AI 视频分析任务管理
+- `ark.js`: 火山引擎 API 封装
 
 **目录约定**:
 - 视频根目录通过 `VIDEO_ROOT_DIR` 环境变量配置
@@ -68,6 +70,35 @@ cd web && npm run build       # 构建生产版本
 
 - `/api/auth/*`: 认证接口
 - `/api/videos/*`: 视频列表、详情、流播放
+- `/api/videos/:timestamp/analysis`: AI 视频分析任务（创建/获取/取消）
 - `/api/history`: 播放历史
 - `/api/favorites`: 收藏
 - `/api/admin/*`: 管理接口 (需要 admin 角色)，包含扫描、转码、用户管理
+- `/api/admin/config/ai`: AI 配置管理
+- `/api/admin/analysis/queue`: 分析任务队列管理
+
+## AI 视频分析
+
+使用火山引擎视频理解 API 分析行车记录仪视频中的潜在风险。
+
+**相关服务**:
+- `analysis.js`: 分析任务管理、队列处理
+- `ark.js`: 火山引擎 API 封装（OpenAI SDK 兼容）
+
+**数据库表**:
+- `video_analysis`: 存储分析任务状态和结果
+
+**配置项** (存储在 config 表):
+- `ark_api_key`: 火山引擎 API Key
+- `ark_model_id`: 模型 ID（如 doubao-seed-2-0-lite-260215）
+- `ark_base_url`: API 基础 URL（默认 https://ark.cn-beijing.volces.com/api/v3）
+
+**分析维度**:
+- 碰撞风险检测
+- 车距分析
+- 车道偏离检测
+- 行人/障碍物识别
+
+**前端组件**:
+- `AiAnalysisButton.vue`: 分析按钮组件
+- `AiAnalysisResult.vue`: 分析结果展示面板
