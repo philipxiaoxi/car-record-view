@@ -53,6 +53,13 @@ class AnalysisService {
       return { id: existing.id, status: 'pending', message: '任务已创建，等待处理' };
     }
 
+    // 如果已存在失败的任务，删除后重新创建
+    if (existing && existing.status === 'failed') {
+      db.prepare(
+        'DELETE FROM video_analysis WHERE id = ?'
+      ).run(existing.id);
+    }
+
     // 创建新任务
     const result = db.prepare(
       `INSERT INTO video_analysis (video_timestamp, camera_type, status) VALUES (?, ?, 'pending')`
