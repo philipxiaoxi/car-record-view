@@ -23,6 +23,12 @@ module.exports = app => {
   router.post('/api/favorites', controller.favorite.add);
   router.delete('/api/favorites/:timestamp', controller.favorite.remove);
 
+  // 视频分析路由
+  router.post('/api/videos/:timestamp/analysis', controller.analysis.create);
+  router.get('/api/videos/:timestamp/analysis', controller.analysis.index);
+  router.get('/api/videos/:timestamp/analysis/:cameraType', controller.analysis.show);
+  router.delete('/api/videos/:timestamp/analysis', controller.analysis.destroy);
+
   // 管理后台路由（需要管理员权限）
   // 扫描路由
   router.post('/api/admin/scan', adminMiddleware, controller.admin.startScan);
