@@ -22,6 +22,16 @@ CREATE TABLE IF NOT EXISTS videos (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 收藏表
+CREATE TABLE IF NOT EXISTS favorites (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  video_timestamp DATETIME NOT NULL,
+  favorited_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id, video_timestamp);
+
 -- 播放历史表
 CREATE TABLE IF NOT EXISTS play_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
