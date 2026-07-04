@@ -89,11 +89,23 @@ class AdminController extends Controller {
 
   async updateConfig() {
     const { ctx } = this;
-    const { videoRootDir } = ctx.request.body;
+    const { videoRootDir, storageType, webdavUrl, webdavUsername, webdavPassword, webdavRootDir } = ctx.request.body;
 
     if (videoRootDir) {
       await adminService.updateConfig('videoRootDir', videoRootDir, ctx.app.config);
       ctx.app.config.video.rootDir = videoRootDir;
+    }
+
+    const storageChanged = storageType !== undefined || webdavUrl !== undefined || webdavUsername !== undefined ||
+      webdavPassword !== undefined || webdavRootDir !== undefined;
+
+    if (storageChanged) {
+      await adminService.updateStorageConfig(
+        { storageType, webdavUrl, webdavUsername, webdavPassword, webdavRootDir },
+        ctx.app.config
+      );
+      const { resetStorageDriver } = require('../service/storage');
+      resetStorageDriver();
     }
 
     ctx.body = { message: '配置更新成功' };

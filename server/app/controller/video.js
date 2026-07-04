@@ -52,6 +52,7 @@ class VideoController extends Controller {
       const fileSize = stat.size;
       const range = ctx.header.range;
 
+      let stream;
       if (range) {
         const parts = range.replace(/bytes=/, '').split('-');
         const start = parseInt(parts[0], 10);
@@ -64,12 +65,19 @@ class VideoController extends Controller {
         ctx.set('Content-Length', chunkSize);
         ctx.set('Content-Type', 'video/mp4');
 
-        ctx.body = fs.createReadStream(mp4Path, { start, end });
+        stream = fs.createReadStream(mp4Path, { start, end });
       } else {
         ctx.set('Content-Length', fileSize);
         ctx.set('Content-Type', 'video/mp4');
-        ctx.body = fs.createReadStream(mp4Path);
+        stream = fs.createReadStream(mp4Path);
       }
+
+      stream.on('error', (err) => {
+        if (err.code === 'EPIPE') return;
+        ctx.logger.error('[Stream] 读取错误:', err.message);
+      });
+
+      ctx.body = stream;
     } catch (err) {
       ctx.status = 500;
       ctx.body = { error: '视频处理失败', message: err.message };

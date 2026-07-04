@@ -4,6 +4,7 @@ const fs = require('fs-extra');
 const { getDatabase } = require('./db');
 const ffmpegService = require('./ffmpeg');
 const transcoderService = require('./transcoder');
+const { getStorageDriver } = require('./storage');
 
 class VideoService {
   async getVideoList(config, page = 1, pageSize = 50) {
@@ -73,13 +74,14 @@ class VideoService {
     return result;
   }
 
-  getVideoPath(filename, config) {
+  getVideoRemotePath(filename) {
     const type = filename.includes('F.ts') ? 'F' : 'R';
-    return path.join(config.video.rootDir, type, filename);
+    return type + '/' + filename;
   }
 
   async getOrCreateMp4Cache(filename, config) {
     const cacheDir = path.join(__dirname, '../../cache/mp4');
+    const tempDir = path.join(__dirname, '../../cache/remote');
     const mp4Filename = filename.replace('.ts', '.mp4');
     const mp4Path = path.join(cacheDir, mp4Filename);
 
@@ -99,13 +101,25 @@ class VideoService {
       }
     }
 
-    const tsPath = this.getVideoPath(filename, config);
+    const storage = getStorageDriver(config);
+    const remotePath = this.getVideoRemotePath(filename);
 
-    if (!await fs.pathExists(tsPath)) {
+    if (!await storage.fileExists(remotePath)) {
       return { error: '视频文件不存在' };
     }
 
-    await ffmpegService.convertTsToMp4(tsPath, mp4Path);
+    if (storage.type === 'local') {
+      const tsPath = storage.getLocalPath(remotePath);
+      await ffmpegService.convertTsToMp4(tsPath, mp4Path);
+    } else {
+      const tempTsPath = path.join(tempDir, filename);
+      await storage.downloadFile(remotePath, tempTsPath);
+      try {
+        await ffmpegService.convertTsToMp4(tempTsPath, mp4Path);
+      } finally {
+        await fs.remove(tempTsPath).catch(() => {});
+      }
+    }
 
     const db = getDatabase(config);
     db.prepare('UPDATE videos SET mp4_cached = 1 WHERE filename = ?').run(filename);
@@ -115,6 +129,8 @@ class VideoService {
 
   async getOrCreateCover(filename, config) {
     const cacheDir = path.join(__dirname, '../../cache/covers');
+    const mp4CacheDir = path.join(__dirname, '../../cache/mp4');
+    const tempDir = path.join(__dirname, '../../cache/remote');
     const coverFilename = filename.replace('.ts', '.jpg');
     const coverPath = path.join(cacheDir, coverFilename);
 
@@ -122,10 +138,21 @@ class VideoService {
       return coverPath;
     }
 
+    // 如果本地有 mp4 缓存，直接从 mp4 提取封面（更快）
+    const mp4Path = path.join(mp4CacheDir, filename.replace('.ts', '.mp4'));
+    if (await fs.pathExists(mp4Path)) {
+      try {
+        await ffmpegService.extractCover(mp4Path, coverPath);
+        console.log('[Cover] 从 mp4 缓存提取封面成功:', filename);
+        return coverPath;
+      } catch (err) {
+        console.error('[Cover] 从 mp4 提取封面失败:', err.message);
+      }
+    }
+
     // 检查是否有正在运行的批量转码任务
     const task = transcoderService.getTaskStatus(config);
     if (task && task.status === 'running') {
-      // 等待批量转码处理这个文件（最多等待 30 秒）
       for (let i = 0; i < 6; i++) {
         await new Promise(resolve => setTimeout(resolve, 5000));
         if (await fs.pathExists(coverPath)) {
@@ -134,16 +161,53 @@ class VideoService {
       }
     }
 
-    const tsPath = this.getVideoPath(filename, config);
+    const storage = getStorageDriver(config);
+    const remotePath = this.getVideoRemotePath(filename);
 
-    if (!await fs.pathExists(tsPath)) {
+    if (!await storage.fileExists(remotePath)) {
+      console.error('[Cover] 远程文件不存在:', remotePath);
       return null;
     }
 
     try {
-      await ffmpegService.extractCover(tsPath, coverPath);
-      return coverPath;
+      if (storage.type === 'local') {
+        const tsPath = storage.getLocalPath(remotePath);
+        await ffmpegService.extractCover(tsPath, coverPath);
+        console.log('[Cover] 从本地文件提取封面成功:', filename);
+        return coverPath;
+      }
+
+      console.log('[Cover] WebDAV 模式，开始下载:', filename);
+
+      const tempPartialPath = path.join(tempDir, filename + '.partial');
+
+      try {
+        console.log('[Cover] 尝试部分下载 (128KB):', filename);
+        await storage.downloadPartial(remotePath, tempPartialPath, 128 * 1024);
+        const partialSize = (await fs.stat(tempPartialPath).catch(() => ({ size: 0 }))).size;
+        console.log('[Cover] 部分下载完成:', partialSize, 'bytes');
+        await ffmpegService.extractCover(tempPartialPath, coverPath);
+        console.log('[Cover] 部分下载封面提取成功:', filename);
+        return coverPath;
+      } catch (partialErr) {
+        console.warn('[Cover] 部分下载/提取失败，尝试完整下载:', partialErr.message);
+      } finally {
+        await fs.remove(tempPartialPath).catch(() => {});
+      }
+
+      const tempFullPath = path.join(tempDir, filename);
+      try {
+        await storage.downloadFile(remotePath, tempFullPath);
+        const fullSize = (await fs.stat(tempFullPath).catch(() => ({ size: 0 }))).size;
+        console.log('[Cover] 完整下载完成:', fullSize, 'bytes');
+        await ffmpegService.extractCover(tempFullPath, coverPath);
+        console.log('[Cover] 完整下载封面提取成功:', filename);
+        return coverPath;
+      } finally {
+        await fs.remove(tempFullPath).catch(() => {});
+      }
     } catch (err) {
+      console.error('[Cover] 封面生成异常:', filename, err.message);
       return path.join(__dirname, '../../public/images/default-cover.jpg');
     }
   }

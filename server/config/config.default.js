@@ -29,6 +29,13 @@ module.exports = {
     defaultCover: '/public/images/default-cover.jpg',
   },
 
+  // 存储配置 - 可通过 STORAGE_TYPE 环境变量配置（local | webdav）
+  storage: {
+    type: process.env.STORAGE_TYPE || 'local',
+    tempDir: path.join(__dirname, '../cache/remote'),
+    keepTemp: process.env.STORAGE_KEEP_TEMP === 'true',
+  },
+
   // 管理员凭据 - 生产环境必须设置 ADMIN_USERNAME 和 ADMIN_PASSWORD 环境变量
   admin: {
     username: process.env.ADMIN_USERNAME || 'admin',

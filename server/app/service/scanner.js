@@ -3,6 +3,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const { getDatabase } = require('./db');
 const ffmpegService = require('./ffmpeg');
+const { getStorageDriver } = require('./storage');
 
 class ScannerService {
   constructor() {
@@ -88,7 +89,7 @@ class ScannerService {
   }
 
   // 处理单个视频文件
-  async processFile(filename, filePath, type, config) {
+  async processFile(filename, type, config) {
     const db = getDatabase(config);
 
     // 检查是否已存在
@@ -100,7 +101,25 @@ class ScannerService {
       return { error: '无效的文件名格式' };
     }
 
-    const metadata = await ffmpegService.getMetadata(filePath);
+    const storage = getStorageDriver(config);
+    const remotePath = type + '/' + filename;
+    const isLocal = storage.type === 'local';
+
+    let duration = null;
+    let resolution = null;
+    let bitrate = null;
+
+    if (isLocal) {
+      try {
+        const filePath = storage.getLocalPath(remotePath);
+        const metadata = await ffmpegService.getMetadata(filePath);
+        duration = Math.round(metadata.duration);
+        resolution = metadata.resolution;
+        bitrate = metadata.bitrate;
+      } catch (err) {
+        console.error(`Failed to get metadata for ${filename}:`, err);
+      }
+    }
 
     db.prepare(`
       INSERT INTO videos (filename, timestamp, type, duration, resolution, bitrate)
@@ -109,9 +128,9 @@ class ScannerService {
       filename,
       timestamp.toISOString(),
       type,
-      Math.round(metadata.duration),
-      metadata.resolution,
-      metadata.bitrate
+      duration,
+      resolution,
+      bitrate
     );
 
     return { added: true };
@@ -147,20 +166,14 @@ class ScannerService {
   // 执行扫描
   async runScan(taskId, config) {
     const db = getDatabase(config);
-    const rootDir = config.video.rootDir;
-    const fDir = path.join(rootDir, 'F');
-    const rDir = path.join(rootDir, 'R');
+    const storage = getStorageDriver(config);
 
     // 获取当前任务进度（用于恢复扫描）
     const task = db.prepare('SELECT processed_files FROM scan_tasks WHERE id = ?').get(taskId);
     let processed = task.processed_files || 0;
 
     // 获取 F 目录所有文件
-    let fFiles = [];
-    if (await fs.pathExists(fDir)) {
-      const files = await fs.readdir(fDir);
-      fFiles = files.filter(f => f.endsWith('.ts'));
-    }
+    let fFiles = await storage.listFiles('F/', /\.ts$/);
 
     const totalFiles = fFiles.length;
     this.updateTaskProgress(taskId, { total_files: totalFiles }, config);
@@ -183,18 +196,16 @@ class ScannerService {
 
       this.updateTaskProgress(taskId, { current_file: filename }, config);
 
-      const fPath = path.join(fDir, filename);
-
       try {
         // 处理 F 文件
-        await this.processFile(filename, fPath, 'F', config);
+        await this.processFile(filename, 'F', config);
 
         // 查找并处理对应的 R 文件
         const rFilename = filename.replace('F.ts', 'R.ts');
-        const rPath = path.join(rDir, rFilename);
+        const rExists = await storage.fileExists('R/' + rFilename);
 
-        if (await fs.pathExists(rPath)) {
-          await this.processFile(rFilename, rPath, 'R', config);
+        if (rExists) {
+          await this.processFile(rFilename, 'R', config);
         }
       } catch (err) {
         console.error(`Error processing ${filename}:`, err);
@@ -218,18 +229,15 @@ class ScannerService {
   // 清理数据库中不存在的文件
   async cleanupMissingFiles(config) {
     const db = getDatabase(config);
-    const rootDir = config.video.rootDir;
-    const fDir = path.join(rootDir, 'F');
-    const rDir = path.join(rootDir, 'R');
+    const storage = getStorageDriver(config);
 
     const videos = db.prepare('SELECT filename FROM videos').all();
 
     for (const v of videos) {
       const type = v.filename.includes('F.ts') ? 'F' : 'R';
-      const dir = type === 'F' ? fDir : rDir;
-      const filePath = path.join(dir, v.filename);
+      const remotePath = type + '/' + v.filename;
 
-      if (!(await fs.pathExists(filePath))) {
+      if (!(await storage.fileExists(remotePath))) {
         db.prepare('DELETE FROM videos WHERE filename = ?').run(v.filename);
       }
     }

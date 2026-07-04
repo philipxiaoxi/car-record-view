@@ -3,6 +3,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const { getDatabase } = require('./db');
 const ffmpegService = require('./ffmpeg');
+const { getStorageDriver } = require('./storage');
 
 class TranscoderService {
   constructor() {
@@ -119,17 +120,29 @@ class TranscoderService {
       return { error: '视频记录不存在' };
     }
 
-    // 检查源文件是否存在
+    const storage = getStorageDriver(config);
     const type = filename.includes('F.ts') ? 'F' : 'R';
-    const sourcePath = path.join(config.video.rootDir, type, filename);
+    const remotePath = type + '/' + filename;
 
-    if (!await fs.pathExists(sourcePath)) {
+    if (!await storage.fileExists(remotePath)) {
       return { error: '源文件不存在' };
     }
 
     const { mp4Path, coverPath } = this.getCachePaths(filename);
+    const tempDir = path.join(__dirname, '../../cache/remote');
+    const tempTsPath = path.join(tempDir, filename);
 
     try {
+      let sourcePath;
+
+      if (storage.type === 'local') {
+        sourcePath = storage.getLocalPath(remotePath);
+      } else {
+        // 下载远程文件到临时目录
+        await storage.downloadFile(remotePath, tempTsPath);
+        sourcePath = tempTsPath;
+      }
+
       // 转码 MP4
       await ffmpegService.convertTsToMp4(sourcePath, mp4Path);
 
@@ -146,6 +159,11 @@ class TranscoderService {
       await fs.remove(coverPath).catch(() => {});
 
       return { error: err.message };
+    } finally {
+      // 清理临时文件
+      if (storage.type !== 'local') {
+        await fs.remove(tempTsPath).catch(() => {});
+      }
     }
   }
 

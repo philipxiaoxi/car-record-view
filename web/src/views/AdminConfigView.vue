@@ -61,16 +61,52 @@
         </v-card-text>
       </v-card>
 
-      <!-- 配置表单 -->
-      <v-form @submit.prevent="saveConfig">
-        <v-text-field v-model="config.videoRootDir" label="视频根目录" outlined :rules="[v => !!v || '必填']" />
-        <v-alert type="info" variant="tonal" class="mb-4">缓存大小：{{ config.cacheSize?.mb || 0 }} MB</v-alert>
-        <v-btn color="error" variant="outlined" class="mr-2" @click="clearCache('all')">清理所有缓存</v-btn>
-        <v-btn color="warning" variant="outlined" class="mr-2" @click="clearCache('mp4')">清理 MP4 缓存</v-btn>
-        <v-btn color="info" variant="outlined" @click="clearCache('covers')">清理封面缓存</v-btn>
-        <v-divider class="my-4" />
-        <v-btn type="submit" color="primary" :loading="saving">保存配置</v-btn>
-      </v-form>
+      <!-- 存储配置 -->
+      <v-card variant="outlined" class="mb-4">
+        <v-card-title class="text-h6">存储配置</v-card-title>
+        <v-card-text>
+          <v-form @submit.prevent="saveConfig">
+            <v-select
+              v-model="config.storageType"
+              :items="storageOptions"
+              label="存储类型"
+              outlined
+              class="mb-3"
+            />
+
+            <v-text-field
+              v-if="config.storageType === 'local'"
+              v-model="config.videoRootDir"
+              label="视频根目录"
+              outlined
+              :rules="[v => !!v || '必填']"
+            />
+
+            <div v-if="config.storageType === 'webdav'" class="ml-2 mb-3">
+              <v-text-field v-model="webdavUrl" label="WebDAV 地址" outlined placeholder="https://192.168.1.100:5005" />
+              <v-text-field v-model="webdavUsername" label="用户名" outlined />
+              <v-text-field
+                v-model="webdavPassword"
+                label="密码"
+                outlined
+                type="password"
+                hint="留空则不修改"
+                persistent-hint
+              />
+              <v-text-field v-model="config.webdavRootDir" label="远程根路径" outlined placeholder="/video" />
+            </div>
+
+            <v-alert type="info" variant="tonal" class="mb-4">缓存大小：{{ config.cacheSize?.mb || 0 }} MB</v-alert>
+            <div class="d-flex flex-wrap ga-2 mb-4">
+              <v-btn color="error" variant="outlined" @click="clearCache('all')">清理所有缓存</v-btn>
+              <v-btn color="warning" variant="outlined" @click="clearCache('mp4')">清理 MP4 缓存</v-btn>
+              <v-btn color="info" variant="outlined" @click="clearCache('covers')">清理封面缓存</v-btn>
+            </div>
+            <v-divider class="mb-4" />
+            <v-btn type="submit" color="primary" :loading="saving">保存配置</v-btn>
+          </v-form>
+        </v-card-text>
+      </v-card>
 
       <!-- AI 配置 -->
       <v-card variant="outlined" class="mt-4">
@@ -108,9 +144,18 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { adminApi } from '../api/admin'
 
-const config = ref({ videoRootDir: '', cacheSize: { bytes: 0, mb: '0' } })
+const config = ref({ videoRootDir: '', storageType: 'local', webdavRootDir: '', cacheSize: { bytes: 0, mb: '0' } })
 const saving = ref(false)
 const scanStatus = ref({ status: 'idle' })
+
+const storageOptions = [
+  { title: '本地文件系统', value: 'local' },
+  { title: 'WebDAV', value: 'webdav' },
+]
+
+const webdavUrl = ref('')
+const webdavUsername = ref('')
+const webdavPassword = ref('')
 const starting = ref(false)
 const rescanning = ref(false)
 let pollTimer = null
@@ -125,6 +170,9 @@ const savingAi = ref(false)
 const loadConfig = async () => {
   const { data } = await adminApi.getConfig()
   config.value = data
+  webdavUrl.value = data.webdavUrl || ''
+  webdavUsername.value = data.webdavUsername || ''
+  webdavPassword.value = data.webdavPassword || ''
 }
 
 const loadAiConfig = async () => {
@@ -216,8 +264,31 @@ const rescan = async () => {
 const saveConfig = async () => {
   saving.value = true
   try {
-    await adminApi.updateConfig({ videoRootDir: config.value.videoRootDir })
+    const isWebDAV = config.value.storageType === 'webdav'
+    const payload = {}
+
+    if (!isWebDAV) {
+      payload.videoRootDir = config.value.videoRootDir
+    }
+
+    if (config.value.storageType !== undefined) {
+      payload.storageType = config.value.storageType
+    }
+
+    if (isWebDAV) {
+      payload.webdavUrl = webdavUrl.value
+      payload.webdavUsername = webdavUsername.value
+      if (webdavPassword.value) {
+        payload.webdavPassword = webdavPassword.value
+      }
+      if (config.value.webdavRootDir) {
+        payload.webdavRootDir = config.value.webdavRootDir
+      }
+    }
+
+    await adminApi.updateConfig(payload)
     alert('配置保存成功')
+    await loadConfig()
   } catch (err) {
     alert(err.response?.data?.error || '保存失败')
   }
