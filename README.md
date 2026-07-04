@@ -12,6 +12,8 @@
 - 📜 **播放历史** - 记录观看进度，断点续播
 - 🔐 **用户认证** - JWT + HttpOnly Cookie 认证，支持多用户管理
 - ⚙️ **管理后台** - 视频扫描、转码管理、用户管理、AI 配置
+- ☁️ **远程存储** - 支持 WebDAV 远程视频文件访问，无需本地挂载
+- 🚀 **一键启动** - 提供 `dev.sh` / `dev.bat` 脚本同时启动前后端
 
 ## 技术栈
 
@@ -50,41 +52,53 @@ cd ../web && npm install
 
 ### 配置
 
-创建本地配置文件 `server/config/config.local.js`：
+**本地文件存储：**
+
+创建 `server/config/config.local.js`：
 
 ```javascript
 // server/config/config.local.js
 module.exports = {
-  // 应用密钥
   keys: 'your-secret-keys-here',
-
-  // JWT 密钥
-  jwt: {
-    secret: 'your-jwt-secret-here',
-  },
-
-  // 视频根目录
-  video: {
-    rootDir: '/path/to/your/videos',
-  },
-
-  // 管理员凭据
-  admin: {
-    username: 'admin',
-    password: 'your-password',
-  },
+  jwt: { secret: 'your-jwt-secret-here' },
+  video: { rootDir: '/path/to/your/videos' },
+  admin: { username: 'admin', password: 'your-password' },
 };
+```
+
+**WebDAV 远程存储（可选）：**
+
+视频文件存储在 WebDAV 服务器时，在管理后台配置，支持的环境变量：
+
+```bash
+export STORAGE_TYPE=webdav
+export WEBDAV_URL=http://192.168.1.100:5005
+export WEBDAV_USERNAME=your-username
+export WEBDAV_PASSWORD=your-password
+export WEBDAV_ROOT_DIR=/video
 ```
 
 > ⚠️ `config.local.js` 已在 `.gitignore` 中，不会被提交到仓库。
 
 ### 运行
 
+**一键启动（推荐）：**
+
 ```bash
-# 启动后端服务 (端口 7001)
+# macOS / Linux
+./dev.sh
+
+# Windows
+双击 dev.bat
+```
+
+**分别启动：**
+
+```bash
+# 后端服务 (端口 7001)
 cd server && npm run dev
 
-# 启动前端服务 (端口 3000，代理到后端)
+# 前端服务 (端口 3000，代理到后端)
 cd web && npm run dev
 ```
 
@@ -98,9 +112,14 @@ cd web && npm run dev
 | `jwt.secret` | ✅ | JWT 签名密钥 |
 | `admin.username` | ✅ | 管理员用户名 |
 | `admin.password` | ✅ | 管理员密码 |
-| `video.rootDir` | ✅ | 视频文件根目录路径 |
+| `video.rootDir` | 本地模式 ✅ | 视频文件根目录路径 |
+| `STORAGE_TYPE` | 否 | 存储类型：`local`（默认）或 `webdav` |
+| `WEBDAV_URL` | WebDAV 模式 ✅ | WebDAV 服务器地址 |
+| `WEBDAV_USERNAME` | WebDAV 模式 ✅ | WebDAV 用户名 |
+| `WEBDAV_PASSWORD` | WebDAV 模式 ✅ | WebDAV 密码 |
+| `WEBDAV_ROOT_DIR` | 否 | WebDAV 远程视频根路径 |
 
-> 生产环境可使用环境变量：`EGG_KEYS`、`JWT_SECRET`、`ADMIN_USERNAME`、`ADMIN_PASSWORD`、`VIDEO_ROOT_DIR`
+> 生产环境可使用环境变量：`EGG_KEYS`、`JWT_SECRET`、`ADMIN_USERNAME`、`ADMIN_PASSWORD`、`VIDEO_ROOT_DIR`、`STORAGE_TYPE`、`WEBDAV_URL`、`WEBDAV_USERNAME`、`WEBDAV_PASSWORD`、`WEBDAV_ROOT_DIR`
 
 ### AI 配置（可选）
 
@@ -116,25 +135,27 @@ cd web && npm run dev
 
 ```
 .
-├── server/                 # 后端服务
+├── dev.sh / dev.bat         # 一键启动脚本
+├── server/                   # 后端服务
 │   ├── app/
-│   │   ├── controller/     # 控制器
-│   │   ├── service/        # 业务逻辑
-│   │   ├── middleware/     # 中间件 (JWT 认证)
-│   │   └── router.js       # 路由配置
-│   ├── config/             # 配置文件
-│   ├── database/           # 数据库初始化脚本
-│   └── cache/              # 转码缓存目录
+│   │   ├── controller/       # 控制器
+│   │   ├── service/
+│   │   │   └── storage/      # 存储驱动 (local / webdav)
+│   │   ├── middleware/       # 中间件 (JWT 认证)
+│   │   └── router.js         # 路由配置
+│   ├── config/               # 配置文件
+│   ├── database/             # 数据库初始化脚本
+│   └── cache/                # 转码缓存目录 (gitignored)
 │
-├── web/                    # 前端应用
+├── web/                      # 前端应用
 │   ├── src/
-│   │   ├── views/          # 页面组件
-│   │   ├── api/            # API 封装
-│   │   ├── stores/         # Pinia 状态管理
-│   │   └── router/         # 路由配置
-│   └── public/             # 静态资源
+│   │   ├── views/            # 页面组件
+│   │   ├── api/              # API 封装
+│   │   ├── stores/           # Pinia 状态管理
+│   │   └── router/           # 路由配置
+│   └── public/               # 静态资源
 │
-└── docs/                   # 文档
+└── docs/                     # 文档
 ```
 
 ## 视频目录结构
