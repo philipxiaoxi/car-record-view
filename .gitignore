@@ -28,6 +28,7 @@ logs/
 
 # Build
 dist/
+server/app/public/
 
 # Database
 *.db
