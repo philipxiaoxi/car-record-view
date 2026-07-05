@@ -3,6 +3,16 @@ const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
 const fs = require('fs-extra');
 
+if (process.env.FFMPEG_PATH && fs.existsSync(process.env.FFMPEG_PATH)) {
+  ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH);
+} else {
+  const execDir = path.dirname(process.execPath);
+  const localFfmpeg = path.join(execDir, process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
+  if (fs.existsSync(localFfmpeg)) {
+    ffmpeg.setFfmpegPath(localFfmpeg);
+  }
+}
+
 class FFmpegService {
   async getMetadata(videoPath) {
     return new Promise((resolve, reject) => {
