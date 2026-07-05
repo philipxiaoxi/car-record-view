@@ -19,7 +19,8 @@
     "webdav": "^4.11.5"
   },
   "devDependencies": {
-    "egg-bin": "^6.6.0"
+    "egg-bin": "^6.6.0",
+    "ffmpeg-static": "^5.3.0"
   },
   "egg": {
     "declarations": true
