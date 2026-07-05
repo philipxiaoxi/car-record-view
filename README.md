@@ -104,6 +104,51 @@ cd web && npm run dev
 
 访问 http://localhost:3000 即可使用。
 
+## 便携包分发
+
+将项目打包为一个可直接运行的文件夹，**无需安装 Node.js、npm 依赖**，双击即可启动。
+
+### 构建
+
+```bash
+# 在项目根目录执行
+npm run build:portable
+```
+
+产物在 `dist/portable/` 目录下。
+
+### 产物结构
+
+```
+dist/portable/
+├── 启动.bat               # Windows 双击启动
+├── 启动.command            # macOS 双击启动
+├── 启动.sh                 # Linux 启动
+├── node/                   # Node.js 运行时（内嵌）
+├── ffmpeg                  # ffmpeg 二进制（内嵌）
+├── server/                 # 服务端代码 + 前端静态文件
+│   ├── app/public/         # 构建后的前端页面
+│   ├── node_modules/       # 生产依赖
+│   └── start.js            # 启动入口
+└── data/                   # 运行时数据（首次启动自动创建）
+    ├── car-record.db       # SQLite 数据库
+    ├── logs/               # 运行日志
+    └── cache/              # 转码缓存
+```
+
+### 使用
+
+1. **首次使用**：先通过浏览器访问 http://localhost:7001，用默认凭据登录后，在管理后台配置 `VIDEO_ROOT_DIR`（视频文件目录）
+2. **登录凭据**：用户名 `admin`，密码 `changeme`（登录后建议修改）
+3. **自定义端口**：编辑启动脚本，修改 `PORT` 环境变量
+
+### 注意事项
+
+- 便携包是**平台相关**的，在 macOS 上构建的不能在 Windows 运行，需在目标平台上构建
+- 视频目录需通过管理后台配置，或设置环境变量 `VIDEO_ROOT_DIR`
+- 如需 `webdav` 存储模式，可在管理后台配置
+- AI 分析功能需在管理后台配置火山引擎 API Key
+
 ## 配置项说明
 
 | 配置项 | 必需 | 说明 |
