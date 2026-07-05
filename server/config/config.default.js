@@ -32,8 +32,14 @@ module.exports = {
   // 存储配置 - 可通过 STORAGE_TYPE 环境变量配置（local | webdav）
   storage: {
     type: process.env.STORAGE_TYPE || 'local',
-    tempDir: path.join(__dirname, '../cache/remote'),
+    tempDir: process.env.CACHE_DIR
+      ? path.join(process.env.CACHE_DIR, 'cache/remote')
+      : path.join(__dirname, '../cache/remote'),
     keepTemp: process.env.STORAGE_KEEP_TEMP === 'true',
+  },
+
+  logger: {
+    dir: process.env.LOG_DIR || path.join(__dirname, '../logs'),
   },
 
   // 管理员凭据 - 生产环境必须设置 ADMIN_USERNAME 和 ADMIN_PASSWORD 环境变量
@@ -52,8 +58,11 @@ module.exports = {
   },
 
   sqlite: {
-    filename: path.join(__dirname, '../database/car-record.db'),
+    filename: process.env.SQLITE_FILENAME || path.join(__dirname, '../database/car-record.db'),
   },
+
+  // Packaged mode data path (set by start.js via env)
+  dataDir: process.env.CACHE_DIR || path.join(__dirname, '../data'),
 
   // 中间件配置
   middleware: ['jwt'],

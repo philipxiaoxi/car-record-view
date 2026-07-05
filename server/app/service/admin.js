@@ -111,7 +111,7 @@ class AdminService {
   }
 
   async getCacheSize() {
-    const cacheDir = path.join(__dirname, '../../cache');
+    const cacheDir = process.env.CACHE_DIR ? path.join(process.env.CACHE_DIR, 'cache') : path.join(__dirname, '../../cache');
 
     const getDirSize = async (dir) => {
       let size = 0;
@@ -136,7 +136,7 @@ class AdminService {
 
   async clearCache(type, config) {
     const db = getDatabase(config);
-    const cacheDir = path.join(__dirname, '../../cache');
+    const cacheDir = process.env.CACHE_DIR ? path.join(process.env.CACHE_DIR, 'cache') : path.join(__dirname, '../../cache');
 
     if (type === 'covers' || type === 'all') {
       await fs.emptyDir(path.join(cacheDir, 'covers'));
