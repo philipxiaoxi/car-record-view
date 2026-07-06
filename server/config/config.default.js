@@ -55,6 +55,11 @@ module.exports = {
     filename: path.join(__dirname, '../database/car-record.db'),
   },
 
+  // 静态文件配置 - 从 app/public 以根路径提供服务
+  static: {
+    prefix: '',
+  },
+
   // 中间件配置
   middleware: ['jwt'],
 };

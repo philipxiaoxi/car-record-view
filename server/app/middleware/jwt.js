@@ -3,6 +3,11 @@ const jwt = require('jsonwebtoken');
 
 module.exports = (options, app) => {
   return async function jwtMiddleware(ctx, next) {
+    // 只保护 API 路由，SPA 静态资源不受限
+    if (!ctx.path.startsWith('/api/')) {
+      return await next();
+    }
+
     // 跳过登录接口
     if (ctx.path === '/api/auth/login') {
       return await next();

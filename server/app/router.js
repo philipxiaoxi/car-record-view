@@ -57,4 +57,7 @@ module.exports = app => {
   router.get('/api/admin/config/ai', adminMiddleware, controller.admin.getAiConfig);
   router.put('/api/admin/config/ai', adminMiddleware, controller.admin.updateAiConfig);
   router.get('/api/admin/analysis/queue', adminMiddleware, controller.admin.getAnalysisQueue);
+
+  // SPA 回退 - 所有非 API 路由返回 index.html
+  router.get('*', controller.home.index);
 };

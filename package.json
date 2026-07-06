@@ -1,0 +1,12 @@
+{
+  "name": "car-record-view-plus",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n web,server -c cyan,green \"cd web && npm run dev\" \"cd server && npm run dev\"",
+    "build": "cd web && npm run build",
+    "start": "cd server && npm start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

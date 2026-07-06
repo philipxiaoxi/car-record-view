@@ -2,7 +2,7 @@
   "name": "car-record-server",
   "version": "1.0.0",
   "scripts": {
-    "start": "egg-scripts start --daemon --title=car-record-server",
+    "start": "egg-scripts start --title=car-record-server",
     "stop": "egg-scripts stop --title=car-record-server",
     "dev": "egg-bin dev",
     "test": "egg-bin test"
