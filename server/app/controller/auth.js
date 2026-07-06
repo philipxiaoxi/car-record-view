@@ -24,7 +24,7 @@ class AuthController extends Controller {
     // 设置 HttpOnly Cookie
     ctx.cookies.set('token', result.token, {
       httpOnly: true,
-      secure: ctx.secure && process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7天

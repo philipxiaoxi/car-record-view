@@ -83,9 +83,7 @@ class TranscoderService {
 
   // 获取缓存路径
   getCachePaths(filename) {
-    const cacheDir = process.env.CACHE_DIR
-      ? path.join(process.env.CACHE_DIR, 'cache')
-      : path.join(__dirname, '../../cache');
+    const cacheDir = path.join(__dirname, '../../cache');
     return {
       mp4Path: path.join(cacheDir, 'mp4', filename.replace('.ts', '.mp4')),
       coverPath: path.join(cacheDir, 'covers', filename.replace('.ts', '.jpg')),
@@ -131,7 +129,7 @@ class TranscoderService {
     }
 
     const { mp4Path, coverPath } = this.getCachePaths(filename);
-    const tempDir = process.env.CACHE_DIR ? path.join(process.env.CACHE_DIR, 'cache/remote') : path.join(__dirname, '../../cache/remote');
+    const tempDir = path.join(__dirname, '../../cache/remote');
     const tempTsPath = path.join(tempDir, filename);
 
     try {

@@ -1,9 +1,0 @@
-{
-  "name": "car-record-view-plus",
-  "private": true,
-  "scripts": {
-    "dev": "bash dev.sh",
-    "build:web": "cd web && npm run build",
-    "build:portable": "node server/scripts/build-portable.js"
-  }
-}

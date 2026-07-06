@@ -80,9 +80,8 @@ class VideoService {
   }
 
   async getOrCreateMp4Cache(filename, config) {
-    const baseCache = process.env.CACHE_DIR ? path.join(process.env.CACHE_DIR, 'cache') : path.join(__dirname, '../../cache');
-    const cacheDir = path.join(baseCache, 'mp4');
-    const tempDir = process.env.CACHE_DIR ? path.join(process.env.CACHE_DIR, 'cache/remote') : path.join(__dirname, '../../cache/remote');
+    const cacheDir = path.join(__dirname, '../../cache/mp4');
+    const tempDir = path.join(__dirname, '../../cache/remote');
     const mp4Filename = filename.replace('.ts', '.mp4');
     const mp4Path = path.join(cacheDir, mp4Filename);
 
@@ -129,10 +128,9 @@ class VideoService {
   }
 
   async getOrCreateCover(filename, config) {
-    const baseCache = process.env.CACHE_DIR ? path.join(process.env.CACHE_DIR, 'cache') : path.join(__dirname, '../../cache');
-    const cacheDir = path.join(baseCache, 'covers');
-    const mp4CacheDir = path.join(baseCache, 'mp4');
-    const tempDir = process.env.CACHE_DIR ? path.join(process.env.CACHE_DIR, 'cache/remote') : path.join(__dirname, '../../cache/remote');
+    const cacheDir = path.join(__dirname, '../../cache/covers');
+    const mp4CacheDir = path.join(__dirname, '../../cache/mp4');
+    const tempDir = path.join(__dirname, '../../cache/remote');
     const coverFilename = filename.replace('.ts', '.jpg');
     const coverPath = path.join(cacheDir, coverFilename);
 
