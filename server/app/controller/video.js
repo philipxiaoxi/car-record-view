@@ -52,11 +52,24 @@ class VideoController extends Controller {
       const fileSize = stat.size;
       const range = ctx.header.range;
 
+      if (fileSize === 0) {
+        ctx.status = 500;
+        ctx.body = { error: '视频缓存文件为空' };
+        return;
+      }
+
       let stream;
       if (range) {
         const parts = range.replace(/bytes=/, '').split('-');
         const start = parseInt(parts[0], 10);
         const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+        if (start >= fileSize) {
+          ctx.status = 416;
+          ctx.set('Content-Range', `bytes */${fileSize}`);
+          return;
+        }
+
         const chunkSize = end - start + 1;
 
         ctx.status = 206;
@@ -67,6 +80,7 @@ class VideoController extends Controller {
 
         stream = fs.createReadStream(mp4Path, { start, end });
       } else {
+        ctx.set('Accept-Ranges', 'bytes');
         ctx.set('Content-Length', fileSize);
         ctx.set('Content-Type', 'video/mp4');
         stream = fs.createReadStream(mp4Path);

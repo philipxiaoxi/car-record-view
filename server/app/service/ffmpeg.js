@@ -38,7 +38,7 @@ class FFmpegService {
 
     return new Promise((resolve, reject) => {
       ffmpeg(inputPath)
-        .outputOptions('-c copy')
+        .outputOptions('-c copy -movflags +faststart -y')
         .output(outputPath)
         .on('end', () => resolve(outputPath))
         .on('error', reject)
