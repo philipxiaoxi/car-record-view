@@ -64,6 +64,11 @@ module.exports = {
   // Packaged mode data path (set by start.js via env)
   dataDir: process.env.CACHE_DIR || path.join(__dirname, '../data'),
 
+  // 静态资源配置 - 从根路径提供 app/public 下的文件
+  static: {
+    prefix: '/',
+  },
+
   // 中间件配置
   middleware: ['jwt'],
 };
